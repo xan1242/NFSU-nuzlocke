@@ -36,7 +36,6 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 bool bShowIntroMessage = false;
 bool bShowAlreadyStartedWarning = false;
 bool bShowStatsWindow = false;
-bool bStatsWindowPassthrough = true;
 bool bShowGameOverScreen = false;
 bool bShownGameOverOnce = false;
 
@@ -79,6 +78,8 @@ int TimeSinceLastMouseMovement = 0;
 #define CFENG_PINSTANCE_ADDR 0x0073578C
 #define PLAYERMONEY_ADDR 0x0076026C
 #define GAMEPAUSED_ADDR 0x007041C4
+// currentrace + 0x14 = timer
+#define CURRENTRACE_POINTER_ADDR 0x0073619C
 
 unsigned int NumberOfCars = 35; // this is a fixed value in the executable, change only if you manage to increase the car count in the game
 
@@ -92,7 +93,7 @@ unsigned int OldGameMode = 0;
 unsigned int LastCarTime = 0;
 unsigned int LastTotalTime = 0;
 unsigned int LastTotalPlayTime = 0;
-unsigned int CaughtRaceTimerObj = 0;
+//unsigned int CaughtRaceTimerObj = 0;
 
 unsigned int GameMode = 0; // 1 = career mode, others are quickrace or online modes
 unsigned int RaceType = 0; // quick race - race type, currently unused
@@ -611,7 +612,6 @@ bool __stdcall NotifyRestart_hook(unsigned int arg1, unsigned int arg2)
 		bMarkedStatusAlready = false;
 	}
 
-	CaughtRaceTimerObj = 0;
 	bRaceFinished = false;
 
 	return result;
@@ -645,7 +645,6 @@ void __stdcall PauseMenu_DoQuitRace_Hook(int unk)
 		bMarkedStatusAlready = false;
 	}
 
-	CaughtRaceTimerObj = 0;
 	bRaceFinished = false;
 
 	return DoQuitRace(unk);
@@ -676,7 +675,6 @@ bool __stdcall PostRace_DoQuitRace_hook(unsigned int arg1, unsigned int arg2)
 	if (GameMode == 1 && bMarkedStatusAlready)
 		bMarkedStatusAlready = false;
 
-	CaughtRaceTimerObj = 0;
 	bRaceFinished = false;
 
 	return result;
@@ -863,6 +861,9 @@ void __stdcall TimeCurrentCar(unsigned int in_time)
 	else
 		car = &DDayCar;
 
+
+
+
 	(*car).TimeSpentRacing = in_time + LastCarTime;
 	TotalTimeSpentRacing = in_time + LastTotalTime;
 }
@@ -899,44 +900,12 @@ bool GameFlowManager_IsPaused_Hook()
 	if (GameMode == 1)
 	{
 		bRaceFinished = true;
-		CaughtRaceTimerObj = 0;
 	}
 
 	return GameFlowManager_IsPaused((void*)thethis);
 }
 
 // hook in RacePosition::Update
-void __stdcall Timer_PrintToString_Hook(char* outstr)
-{
-	unsigned int thethis = 0;
-	unsigned int theint = 0;
-	_asm mov thethis, edi
-	_asm mov theint, eax
-
-	if (GameMode == 1)
-	{
-		if (CaughtRaceTimerObj != thethis) // at this point the timer starts anyway...
-		{
-			NuzlockeStruct* car;
-
-			if (bProfileStartedCareer)
-			{
-				unsigned int ci = FindCarIndexByHash(CareerCarHash);
-				car = &NuzCars[ci];
-			}
-			else
-				car = &DDayCar;
-
-			LastCarTime = (*car).TimeSpentRacing;
-			LastTotalTime = TotalTimeSpentRacing;
-
-			CaughtRaceTimerObj = thethis;
-		}
-	}
-	//TimeCurrentCar(*(unsigned int*)thethis);
-	return Timer_PrintToString((void*)thethis, outstr, theint);
-}
-
 
 #pragma runtime_checks( "", restore )
 
@@ -984,7 +953,6 @@ void ResetNuzlocke()
 	LastCarTime = 0;
 	LastTotalPlayTime = 0;
 	LastTotalTime = 0;
-	CaughtRaceTimerObj = 0;
 
 	UpdateCarUnlockStatus();
 }
@@ -1034,8 +1002,17 @@ void UpdateNuzGameStatus()
 
 	if (!bGameIsOver)
 	{
-		if ((GameFlowStatus == 6) && (GameMode == 1) && CaughtRaceTimerObj)
-			TimeCurrentCar(*(unsigned int*)CaughtRaceTimerObj);
+		if ((GameFlowStatus == 6) && (GameMode == 1) && *(int*)CURRENTRACE_POINTER_ADDR)
+		{
+			TimeCurrentCar(*(unsigned int*)((*(int*)CURRENTRACE_POINTER_ADDR) + 0x14));
+		}
+
+		if (*(int*)CURRENTRACE_POINTER_ADDR == 0)
+		{
+			LastCarTime = NuzCars[FindCarIndexByHash(CareerCarHash)].TimeSpentRacing;
+			LastTotalTime = TotalTimeSpentRacing;
+		}
+
 		TimeTotalPlaytime();
 	}
 
@@ -1421,8 +1398,6 @@ void ShowStatsWindow()
 			ImGui::Text(NUZLOCKE_REASON_COMPLETE);
 	}
 	ImGui::Separator();
-	ImGui::Checkbox("Input Passthrough", &bStatsWindowPassthrough);
-	ImGui::Separator();
 	if (ImGui::CollapsingHeader("Per-car stats", ImGuiTreeNodeFlags_None))
 	{
 		if (ImGui::BeginTable("car_table", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
@@ -1679,12 +1654,6 @@ LRESULT WINAPI WndProcImgui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	//return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-bool bAreAnyDialogsOpen()
-{
-	// just stack dialogs here with OR (we shouldn't have too many)
-	return bShowIntroMessage || bShowAlreadyStartedWarning || (bShowStatsWindow && !bStatsWindowPassthrough) || bShowGameOverScreen;
-}
-
 void UpdateFECursorPos()
 {
 	POINT MousePos;
@@ -1815,6 +1784,10 @@ void __stdcall MainLoopHook()
 	RaceType = *(int*)RACETYPE_ADDR;
 	Money = *(int*)PLAYERMONEY_ADDR;
 
+	// debug
+	//printf("CaughtTimerObj: 0x%X\n", CaughtRaceTimerObj);
+
+
 	if (!bBlockedGameInput)
 		UpdateFECursorPos();
 
@@ -1873,7 +1846,7 @@ int Init()
 	// hook in RaceCoordinator::TheRaceHasFinished to mark the end of race
 	injector::MakeCALL(0x00423F60, GameFlowManager_IsPaused_Hook, true);
 	// hook in RacePosition::Update
-	injector::MakeCALL(0x004A03A7, Timer_PrintToString_Hook, true);
+	//injector::MakeCALL(0x004A03A7, Timer_PrintToString_Hook, true);
 
 	// UndergroundMenu vtable hook
 	injector::WriteMemory<unsigned int>(0x006C2D9C, (unsigned int)&UndergroundMenuScreen_NotificationMessage_Hook, true);
