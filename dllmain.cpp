@@ -80,6 +80,7 @@ int TimeSinceLastMouseMovement = 0;
 #define GAMEPAUSED_ADDR 0x007041C4
 // currentrace + 0x14 = timer
 #define CURRENTRACE_POINTER_ADDR 0x0073619C
+#define PLAYER_POINTER 0x007361BC
 
 unsigned int NumberOfCars = 35; // this is a fixed value in the executable, change only if you manage to increase the car count in the game
 
@@ -106,6 +107,7 @@ bool bGameStarted = false; // should start right after entering career mode
 bool bProfileStartedCareer = false;
 bool bAllowTradingCarMidGame = false; // option to allow/disallow car changing mid-game
 bool bRaceFinished = false;
+bool bShowingRaceOver = false;
 bool bMarkedStatusAlready = false;
 
 unsigned int UnlockedCarCount = 0; // we MUST keep track of this -- if the player has 1 car unlocked, trade menu CANNOT open
@@ -181,14 +183,11 @@ unsigned int(__stdcall* cFEng_GetMouseInfo)(unsigned int FEMouseInfo) = (unsigne
 // GameFlowManager
 bool(__thiscall* GameFlowManager_IsPaused)(void* dis) = (bool(__thiscall*)(void*))0x0043A2E0;
 
-
-
 void(*sub_546780)() = (void(*)())0x546780;
 void(*sub_4DFD70)() = (void(*)())0x4DFD70;
 void(*sub_40A4E0)() = (void(*)())0x0040A4E0;
 void(*GenerateJoyEvents)() = (void(*)())0x00573CB0;
 void(*game_crt_free)(void* block) = (void(*)(void*))0x00671102;
-
 
 
 unsigned int GameWndProcAddr = 0;
@@ -1002,7 +1001,29 @@ void UpdateNuzGameStatus()
 
 	if (!bGameIsOver)
 	{
-		if ((GameFlowStatus == 6) && (GameMode == 1) && *(int*)CURRENTRACE_POINTER_ADDR)
+		int pointer = *(int*)PLAYER_POINTER;
+		if (pointer)
+		{
+			pointer = *(int*)(pointer + 0x95C);
+			if (pointer)
+			{
+				pointer = *(int*)(pointer + 0x30);
+				if (pointer)
+				{
+					pointer = *(int*)(pointer + 0x18);
+					if (pointer != 0)
+						bShowingRaceOver = true;
+				}
+				else
+					bShowingRaceOver = false;
+			}
+			else
+				bShowingRaceOver = false;
+		}
+		else
+			bShowingRaceOver = false;
+
+		if ((GameFlowStatus == 6) && (GameMode == 1) && *(int*)CURRENTRACE_POINTER_ADDR && !bShowingRaceOver)
 		{
 			TimeCurrentCar(*(unsigned int*)((*(int*)CURRENTRACE_POINTER_ADDR) + 0x14));
 		}
