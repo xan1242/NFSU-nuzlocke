@@ -8,6 +8,7 @@
 // TODO: add difficulty locker
 // TODO: session saving maybe?
 // TODO: finish intro message
+// TODO: config file
 // TODO: (for fun) add an option to turn traffic AI to race AI:
 // to do that:
 // injector::WriteMemory<unsigned int>(0x0044AB40, 0x44AA3F, true);
