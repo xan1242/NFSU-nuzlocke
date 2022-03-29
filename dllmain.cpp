@@ -1727,10 +1727,10 @@ void ShowDifficultySelector()
 			ImGui::RadioButton("Medium##Game", (int*)&CustomLockedGameDifficulty, 2);
 			ImGui::RadioButton("Hard##Game", (int*)&CustomLockedGameDifficulty, 3);
 
-			NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
+			/*NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
 			NumberOfLives = CustomNumberOfLives;
 			bAllowTradingCarMidGame = bCustomAllowTrading;
-			LockedGameDifficulty = CustomLockedGameDifficulty;
+			LockedGameDifficulty = CustomLockedGameDifficulty;*/
 		}
 		ImGui::EndPopup();
 	}
