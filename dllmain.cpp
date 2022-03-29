@@ -221,6 +221,7 @@ unsigned int(__stdcall* cFEng_GetMouseInfo)(unsigned int FEMouseInfo) = (unsigne
 bool(__thiscall* GameFlowManager_IsPaused)(void* dis) = (bool(__thiscall*)(void*))0x0043A2E0;
 // UndergroundBriefScreen
 void(__thiscall* UndergroundBriefScreen_NotificationMessage)(void* UndergroundBriefScreen, unsigned int msg, void* FEObject, unsigned int unk2, unsigned int unk3) = (void(__thiscall*)(void*, unsigned int, void*, unsigned int, unsigned int))0x004C5FA0;
+void(__thiscall* UndergroundBriefScreen_LaunchCurrentEvent)(void* UndergroundBriefScreen, void* FEObject) = (void(__thiscall*)(void*, void*))0x004C5DF0;
 
 
 void(*sub_546780)() = (void(*)())0x546780;
@@ -956,7 +957,7 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 {
 	unsigned int thethis = 0;
 	_asm mov thethis, ecx
-	unsigned int DifficultyHash = 0;
+	unsigned int DifficultyHash[3] = {0};
 
 	printf("In UndergroundBriefScreen!!!\n");
 
@@ -965,25 +966,17 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 		switch (LockedGameDifficulty)
 		{
 		case 3:
-			DifficultyHash = 0x16821E;
+			DifficultyHash[2] = 0x16821E;
 			break;
 		case 2:
-			DifficultyHash = 0x6BAA2200;
+			DifficultyHash[2] = 0x6BAA2200;
 			break;
 		case 1:
 		default:
-			DifficultyHash = 0x14DD31;
+			DifficultyHash[2] = 0x14DD31;
 			break;
 		}
-		//*(int*)((int)FEObject + 0x10) = DifficultyHash;
-		//return UndergroundBriefScreen_NotificationMessage((void*)thethis, 0x0C407210, FEObject, unk2, unk3);
-		int pointer = *(int*)(thethis + 0x54);
-		printf("pointer: %x\n", pointer);
-		//if (pointer)
-		//{
-		//	*(int*)(pointer + 0x10) = DifficultyHash;
-		//	return UndergroundBriefScreen_NotificationMessage((void*)thethis, 0xAADDDDAA, FEObject, unk2, unk3);
-		//}
+		return UndergroundBriefScreen_LaunchCurrentEvent((void*)DifficultyHash, (void*)thethis);
 	}
 
 	return UndergroundBriefScreen_NotificationMessage((void*)thethis, msg, FEObject, unk2, unk3);
