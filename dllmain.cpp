@@ -6,14 +6,6 @@
 // TODO: add an "extra life" system maybe
 // TODO: session saving maybe?
 // TODO: finish intro message
-// TODO: (for fun) add an option to turn traffic AI to race AI:
-// to do that:
-// injector::WriteMemory<unsigned int>(0x0044AB40, 0x44AA3F, true);
-// injector::WriteMemory<unsigned int>(0x0044AB44, 0x44AA3F, true);
-// injector::MakeJMP(0x0044AAF3, 0x0044AA3F, true);
-// injector::MakeJMP(0x0044D817, 0x0044D7D2, true);
-// injector::MakeJMP(0x0044D82E, 0x0044D7D2, true);
-// works but it's injected, we need to code cave it to make it a variable setting
 
 
 #include "NFSU_nuzlocke.h"
@@ -982,7 +974,7 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 }
 #pragma runtime_checks( "", restore )
 
-
+// we must cave it in because we want to control it by a boolean variable easily
 // entrypoint: 0x044AAF3
 unsigned int TrafficRacersExit1True = 0x0044AA3F;
 unsigned int TrafficRacersExit1False = 0x00044AAF9;
@@ -996,6 +988,71 @@ void __declspec(naked) TrafficRacersCave1()
 		mov eax, ds:0x73609C
 		push esi
 		jmp TrafficRacersExit1False
+	}
+}
+
+// entrypoint: 0x44AAA6
+unsigned int bOMalloc_Addr = 0x00567160;
+unsigned int TrafficRacersExit2True = 0x0044AA3F;
+unsigned int TrafficRacersExit2False = 0x0044AAB0;
+void __declspec(naked) TrafficRacersCave2()
+{
+	if (bTrafficRacers)
+		_asm jmp TrafficRacersExit2True
+
+	_asm
+	{
+		mov eax, ds:0x73609C
+		call bOMalloc_Addr
+		jmp TrafficRacersExit2False
+	}
+}
+
+// entrypoint: 0x44AAC7
+unsigned int TrafficRacersExit3True = 0x0044AA3F;
+unsigned int TrafficRacersExit3False = 0x0044AAD1;
+void __declspec(naked) TrafficRacersCave3()
+{
+	if (bTrafficRacers)
+		_asm jmp TrafficRacersExit3True
+
+	_asm
+	{
+		mov eax, ds:0x73609C
+		call bOMalloc_Addr
+		jmp TrafficRacersExit3False
+	}
+}
+
+// entrypoint: 0x0044D817
+unsigned int TrafficRacersExit4True = 0x0044D7D2;
+unsigned int TrafficRacersExit4False = 0x0044D821;
+void __declspec(naked) TrafficRacersCave4()
+{
+	if (bTrafficRacers)
+		_asm jmp TrafficRacersExit4True
+
+	_asm
+	{
+		mov eax, ds:0x73609C
+		call bOMalloc_Addr
+		jmp TrafficRacersExit4False
+	}
+}
+
+// entrypoint: 0x0044D82E
+unsigned int TrafficRacersExit5True = 0x0044D7D2;
+unsigned int TrafficRacersExit5False = 0x0044D838;
+void __declspec(naked) TrafficRacersCave5()
+{
+	if (bTrafficRacers)
+		_asm jmp TrafficRacersExit5True
+
+	_asm
+	{
+		mov eax, ds:0x73609C
+		call bOMalloc_Addr
+		jmp TrafficRacersExit5False
 	}
 }
 
@@ -1799,6 +1856,8 @@ void ShowDifficultySelector()
 			bFocusedAlready = true;
 		}
 		ImGui::Separator();
+		ImGui::Checkbox("Use racer AI for traffic", &bTrafficRacers);
+		ImGui::Separator();
 		if (ImGui::CollapsingHeader("Custom settings", ImGuiTreeNodeFlags_None))
 		{
 			bool bChangedSetting = false;
@@ -1825,11 +1884,6 @@ void ShowDifficultySelector()
 
 			if (bChangedSetting)
 				UpdateCustomDifficultySettings();
-
-			/*NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
-			NumberOfLives = CustomNumberOfLives;
-			bAllowTradingCarMidGame = bCustomAllowTrading;
-			LockedGameDifficulty = CustomLockedGameDifficulty;*/
 		}
 		ImGui::EndPopup();
 	}
@@ -2150,7 +2204,6 @@ int Init()
 
 	// UndergroundBrief vtable hook for forced game difficulty setting
 	injector::WriteMemory<unsigned int>(0x006C52E8, (unsigned int)&UndergroundBriefScreen_NotificationMessage_Hook, true);
-	//injector::MakeJMP(0x004C5FB4, 0x004C5FF6, true);
 
 	// ChooseCareerCar cave
 	injector::MakeJMP(0x004E8A2F, ChooseCareerCar_Cave, true);
@@ -2159,6 +2212,12 @@ int Init()
 	// TradeCarScreen hook -- for car price checking
 	injector::MakeCALL(0x004C3649, UndergroundTradeCarScreen_Constructor_Hook, true);
 	
+	// FUN - traffic racer AI swap
+	injector::MakeJMP(0x0044AAF3, TrafficRacersCave1, true);
+	injector::MakeJMP(0x44AAA6, TrafficRacersCave2, true);
+	injector::MakeJMP(0x44AAC7, TrafficRacersCave3, true);
+	injector::MakeJMP(0x0044D817, TrafficRacersCave4, true);
+	injector::MakeJMP(0x0044D82E, TrafficRacersCave5, true);
 
 	// ImGui hooks
 	// render hook
