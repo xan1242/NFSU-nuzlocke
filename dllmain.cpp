@@ -255,7 +255,7 @@ void ReadIniFile()
 	bSkipAlreadyStartedWarning = inireader.ReadInteger("Nuzlocke", "SkipAlreadyStartedWarning", 0);
 	bHideFEHUD = inireader.ReadInteger("Nuzlocke", "HideFEHUD", 0);
 	bHideIGHUD = inireader.ReadInteger("Nuzlocke", "HideIGHUD", 0);
-	NumberOfCars = inireader.ReadInteger("Nuzlocke", "NumberOfCars", 35)
+	NumberOfCars = inireader.ReadInteger("Nuzlocke", "NumberOfCars", 35);
 
 	CustomNumberOfLives = inireader.ReadInteger("CustomGame", "NumberOfLives", 2);
 	bCustomAllowTrading = inireader.ReadInteger("CustomGame", "AllowTrading", 1);
