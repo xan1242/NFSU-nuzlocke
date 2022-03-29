@@ -115,6 +115,8 @@ unsigned int NuzlockeDifficulty = 0; // 0 = easy, 1 = medium, 2 = hard/nuzlocke,
 unsigned int NumberOfLives = 1; // starting number of lives
 bool bAllowTradingCarMidGame = false; // option to allow/disallow car changing mid-game
 unsigned int LockedGameDifficulty = 0; // 0 = unlocked, 1 = easy, 2 = medium, 3 = hard
+// VARIABLE FOR FUN - force traffic cars into race paths (independent of difficulty)
+bool bTrafficRacers = false;
 
 unsigned int CustomNumberOfLives = 2;
 unsigned int CustomLockedGameDifficulty = 0;
@@ -979,6 +981,23 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 	return UndergroundBriefScreen_NotificationMessage((void*)thethis, msg, FEObject, unk2, unk3);
 }
 #pragma runtime_checks( "", restore )
+
+
+// entrypoint: 0x044AAF3
+unsigned int TrafficRacersExit1True = 0x0044AA3F;
+unsigned int TrafficRacersExit1False = 0x00044AAF9;
+void __declspec(naked) TrafficRacersCave1()
+{
+	if (bTrafficRacers)
+		_asm jmp TrafficRacersExit1True
+
+	_asm
+	{
+		mov eax, ds:0x73609C
+		push esi
+		jmp TrafficRacersExit1False
+	}
+}
 
 
 void UGModeStart_Hook()
