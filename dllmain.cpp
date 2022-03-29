@@ -4,7 +4,6 @@
 // TODO: add session saving - this game is prone to crashing regardless of this mod
 // TODO: add a points system of some sort
 // TODO: add an "extra life" system maybe
-// TODO: add difficulty locker
 // TODO: session saving maybe?
 // TODO: finish intro message
 // TODO: (for fun) add an option to turn traffic AI to race AI:
