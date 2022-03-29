@@ -37,7 +37,11 @@ bool bShowIntroMessage = false;
 bool bShowAlreadyStartedWarning = false;
 bool bShowStatsWindow = false;
 bool bShowGameOverScreen = false;
+bool bShowCarLifeHint = false;
+
+// Show-once bools
 bool bShownGameOverOnce = false;
+bool bShownLifeOverOnce = false;
 
 ImFont* lcd_font;
 char hud_disp_string[1024];
@@ -813,6 +817,14 @@ void __stdcall UndergroundMenuScreen_NotificationMessage_Hook(unsigned int unk1,
 		// FORCE SWITCH TO TRADE CAR SCREEN
 		FEngSendMessageToPackage(0x6C6603DF, "GarageMain.fng");
 		LaunchPartsBrowser(1, (void*)0x75EEF8, *(char**)(thethis + 0xC), TradeCarScreen, 0);
+
+		if (!bShownLifeOverOnce)
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_CARLIFE);
+			bShowCarLifeHint = true;
+			bShownLifeOverOnce = true;
+		}
+
 		return;
 	}
 
@@ -963,9 +975,12 @@ void ResetNuzlocke()
 	bGameComplete = false;
 	bAllCarsLost = false;
 	bCantAffordAnyCar = false;
-	bShownGameOverOnce = false;
 	bRaceFinished = false;
 	bMarkedStatusAlready = false;
+
+	// shown once bools
+	bShownGameOverOnce = false;
+	bShownLifeOverOnce = false;
 
 	TotalWins = 0;
 	TotalLivesLost = 0;
@@ -1471,7 +1486,7 @@ void ShowIntroMessage()
 		ImGui::Separator();
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 			ImGui::SetKeyboardFocusHere(0);
-		if (ImGui::Button("(A / Space) Close"))
+		if (ImGui::Button(NUZLOCKE_UI_CLOSE_TXT))
 			bShowIntroMessage = false;
 		ImGui::EndPopup();
 	}
@@ -1495,7 +1510,7 @@ void ShowAlreadyLoadedWarning()
 		ImGui::Separator();
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 			ImGui::SetKeyboardFocusHere(0);
-		if (ImGui::Button("(A / Space) Close"))
+		if (ImGui::Button(NUZLOCKE_UI_CLOSE_TXT))
 			bShowAlreadyStartedWarning = false;
 		ImGui::EndPopup();
 	}
@@ -1579,8 +1594,26 @@ void ShowGameOverScreen()
 			}
 		}
 		ImGui::Separator();
-		if (ImGui::Button("(A / Space) Close"))
+		if (ImGui::Button(NUZLOCKE_UI_CLOSE_TXT))
 			bShowGameOverScreen = false;
+		ImGui::EndPopup();
+	}
+}
+
+void ShowCarLifeHint()
+{
+	ImGui::SetNextWindowSize(ImVec2(800.0, 0.0));
+	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_CARLIFE, &bShowCarLifeHint, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::PushTextWrapPos();
+		ImGui::TextUnformatted(NUZLOCKE_CARLIFE_MSG);
+		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+			ImGui::SetKeyboardFocusHere(0);
+		if (ImGui::Button(NUZLOCKE_UI_CLOSE_TXT))
+			bShowCarLifeHint = false;
+
 		ImGui::EndPopup();
 	}
 }
@@ -1605,6 +1638,8 @@ void ShowWindows()
 		ShowIntroMessage();
 	if (bShowAlreadyStartedWarning)
 		ShowAlreadyLoadedWarning();
+	if (bShowCarLifeHint)
+		ShowCarLifeHint();
 }
 
 
@@ -1734,6 +1769,14 @@ void UpdateFECursorPos()
 
 }
 
+// put "Return / Enter" to be the default accept button instead of "Space" to make it more convenient
+void ImguiIO_SetAcceptButton(ImGuiIO& io)
+{
+	 // using Win32 here since it responds better than ImGui (isn't overzelaous and quick with reading inputs)
+	if (GetAsyncKeyState(VK_RETURN) & 1)
+		io.NavInputs[ImGuiNavInput_Activate] = 1.0f;
+}
+
 //////////////////////////////////////////////////////////////////
 // ImGui Code End
 //////////////////////////////////////////////////////////////////
@@ -1806,13 +1849,10 @@ void __stdcall MainLoopHook()
 	RaceType = *(int*)RACETYPE_ADDR;
 	Money = *(int*)PLAYERMONEY_ADDR;
 
-	// debug
-	//printf("CaughtTimerObj: 0x%X\n", CaughtRaceTimerObj);
-
-
 	if (!bBlockedGameInput)
 		UpdateFECursorPos();
 
+	ImguiIO_SetAcceptButton(io);
 	ImguiUpdate();
 	ShowWindows();
 	UpdateNuzGameStatus();
