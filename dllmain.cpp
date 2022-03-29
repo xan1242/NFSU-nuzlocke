@@ -867,6 +867,7 @@ void __declspec(naked) ChooseCareerCar_Cave()
 // time spent racing
 void __stdcall TimeCurrentCar(unsigned int in_time)
 {
+	bShowingRaceOver = false;
 	int pointer = *(int*)PLAYER_POINTER;
 	if (pointer)
 	{
@@ -880,14 +881,8 @@ void __stdcall TimeCurrentCar(unsigned int in_time)
 				if (pointer != 0)
 					bShowingRaceOver = true;
 			}
-			else
-				bShowingRaceOver = false;
 		}
-		else
-			bShowingRaceOver = false;
 	}
-	else
-		bShowingRaceOver = false;
 
 
 	NuzlockeStruct* car;
