@@ -212,13 +212,16 @@ unsigned int(__stdcall*PostRaceMenuScreen_Setup)(unsigned int PostRaceMenuScreen
 // FE stuff
 void(__thiscall* _FEngSetColor)(void* FEObject, unsigned int color) = (void(__thiscall*)(void*, unsigned int))0x004F75B0;
 // UndergroundMenuScreen
-void(__thiscall* UndergroundMenuScreen_NotificationMessage)(void* UndergroundMenuScreen, unsigned int unk1, void* FEObject, unsigned int unk2, unsigned int unk3) = (void(__thiscall*)(void*, unsigned int, void*, unsigned int, unsigned int))0x004EB1E0;
+void(__thiscall* UndergroundMenuScreen_NotificationMessage)(void* UndergroundMenuScreen, unsigned int msg, void* FEObject, unsigned int unk2, unsigned int unk3) = (void(__thiscall*)(void*, unsigned int, void*, unsigned int, unsigned int))0x004EB1E0;
 // UndergroundTradeCarScreen
 unsigned int(__stdcall*UndergroundTradeCarScreen_Constructor)(void* Object, void* ScreenConstructorData) = (unsigned int(__stdcall*)(void*, void*))0x004C2ED0;
 //cFEng
 unsigned int(__stdcall* cFEng_GetMouseInfo)(unsigned int FEMouseInfo) = (unsigned int(__stdcall*)(unsigned int))0x004F6080;
 // GameFlowManager
 bool(__thiscall* GameFlowManager_IsPaused)(void* dis) = (bool(__thiscall*)(void*))0x0043A2E0;
+// UndergroundBriefScreen
+void(__thiscall* UndergroundBriefScreen_NotificationMessage)(void* UndergroundBriefScreen, unsigned int msg, void* FEObject, unsigned int unk2, unsigned int unk3) = (void(__thiscall*)(void*, unsigned int, void*, unsigned int, unsigned int))0x004C5FA0;
+
 
 void(*sub_546780)() = (void(*)())0x546780;
 void(*sub_4DFD70)() = (void(*)())0x4DFD70;
@@ -946,9 +949,45 @@ bool GameFlowManager_IsPaused_Hook()
 
 	return GameFlowManager_IsPaused((void*)thethis);
 }
+#pragma runtime_checks( "", restore )
 
-// hook in RacePosition::Update
+#pragma runtime_checks( "", off )
+void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg, void* FEObject, unsigned int unk2, unsigned int unk3)
+{
+	unsigned int thethis = 0;
+	_asm mov thethis, ecx
+	unsigned int DifficultyHash = 0;
 
+	printf("In UndergroundBriefScreen!!!\n");
+
+	if ((GameMode == 1) && !bGameIsOver && LockedGameDifficulty)
+	{
+		switch (LockedGameDifficulty)
+		{
+		case 3:
+			DifficultyHash = 0x16821E;
+			break;
+		case 2:
+			DifficultyHash = 0x6BAA2200;
+			break;
+		case 1:
+		default:
+			DifficultyHash = 0x14DD31;
+			break;
+		}
+		//*(int*)((int)FEObject + 0x10) = DifficultyHash;
+		//return UndergroundBriefScreen_NotificationMessage((void*)thethis, 0x0C407210, FEObject, unk2, unk3);
+		int pointer = *(int*)(thethis + 0x54);
+		printf("pointer: %x\n", pointer);
+		//if (pointer)
+		//{
+		//	*(int*)(pointer + 0x10) = DifficultyHash;
+		//	return UndergroundBriefScreen_NotificationMessage((void*)thethis, 0xAADDDDAA, FEObject, unk2, unk3);
+		//}
+	}
+
+	return UndergroundBriefScreen_NotificationMessage((void*)thethis, msg, FEObject, unk2, unk3);
+}
 #pragma runtime_checks( "", restore )
 
 
@@ -2100,12 +2139,17 @@ int Init()
 	// UndergroundMenu vtable hook
 	injector::WriteMemory<unsigned int>(0x006C2D9C, (unsigned int)&UndergroundMenuScreen_NotificationMessage_Hook, true);
 
+	// UndergroundBrief vtable hook for forced game difficulty setting
+	injector::WriteMemory<unsigned int>(0x006C52E8, (unsigned int)&UndergroundBriefScreen_NotificationMessage_Hook, true);
+	//injector::MakeJMP(0x004C5FB4, 0x004C5FF6, true);
+
 	// ChooseCareerCar cave
 	injector::MakeJMP(0x004E8A2F, ChooseCareerCar_Cave, true);
 	// UG mode start hook (on new game)
 	injector::MakeCALL(0x004B382D, UGModeStart_Hook, true);
 	// TradeCarScreen hook -- for car price checking
 	injector::MakeCALL(0x004C3649, UndergroundTradeCarScreen_Constructor_Hook, true);
+	
 
 	// ImGui hooks
 	// render hook
