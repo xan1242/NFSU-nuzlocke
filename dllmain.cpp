@@ -337,12 +337,13 @@ unsigned int __stdcall FEngFindObject(const char* pkg, int hash)
 
 void __stdcall FEngSetButtonState(const char* pkgname, unsigned int hash, unsigned int state)
 {
+	int cfeng_instance = *(int*)CFENG_PINSTANCE_ADDR;
 	_asm
 	{
 		push state
 		mov edi, hash
 		mov eax, pkgname
-		push 0
+		push cfeng_instance
 		call FEngSetButtonState_Addr
 		//add esp, 4
 	}
@@ -737,84 +738,37 @@ bool __stdcall PostRace_DoQuitRace_hook(unsigned int arg1, unsigned int arg2)
 	return result;
 }
 
+#pragma runtime_checks( "", off )
 // if player is on last life, "Restart" is disabled in both PauseMenu and PostRace menus
-unsigned int PauseMenuCave1_Exit_True = 0x004CE15F;
-unsigned int PauseMenuCave1_Exit_False = 0x004CE14C;
-char* PauseMenuCave1_pkgname = 0;
-void __declspec(naked) PauseMenuSetup_Cave1()
+// Hook for pause menus
+void __stdcall FEngSetButtonState_Hook(unsigned int cfeng, unsigned int state)
 {
-	_asm
-	{
-		mov eax, [ebx+0xC]
-		mov PauseMenuCave1_pkgname, eax
-	}
+	char* pkgname = 0;
+	unsigned int hash = 0;
+	_asm mov pkgname, eax
+	_asm mov hash, edi
+
+	NuzlockeStruct* car;
 
 	if (bProfileStartedCareer)
 	{
-		if ((NuzCars[FindCarIndexByHash(CareerCarHash)].Lives <= 1) && (GameMode == 1))
-		{
-			FE_SetColor_Hash(0x1AEC7D0A, PauseMenuCave1_pkgname, 0xFF404040);
-			_asm jmp PauseMenuCave1_Exit_True
-		}
+		unsigned int ci = FindCarIndexByHash(CareerCarHash);
+		car = &NuzCars[ci];
 	}
 	else
+		car = &DDayCar;
+
+	if ((*car).Lives <= 1 && (GameMode == 1))
 	{
-		if ((DDayCar.Lives <= 1) && (GameMode == 1))
-		{
-			FE_SetColor_Hash(0x1AEC7D0A, PauseMenuCave1_pkgname, 0xFF404040);
-			_asm jmp PauseMenuCave1_Exit_True
-		}
+		FE_SetColor_Hash(0x1AEC7D0A, pkgname, 0xFF404040);
+		return;
 	}
-	
-	_asm
-	{
-		mov eax, ds:CFENG_PINSTANCE_ADDR
-		push 1
-		push eax
-		mov eax, [ebx+0xC]
-		jmp PauseMenuCave1_Exit_False
-	}
+
+	return FEngSetButtonState(pkgname, hash, state);
 
 }
+#pragma runtime_checks( "", restore )
 
-unsigned int PauseMenuCave2_Exit_True = 0x004CE3B2;
-unsigned int PauseMenuCave2_Exit_False = 0x004CE39E;
-char* PauseMenuCave2_pkgname = 0;
-void __declspec(naked) PauseMenuSetup_Cave2()
-{
-	_asm
-	{
-		mov eax, [ebx + 0xC]
-		mov PauseMenuCave2_pkgname, eax
-	}
-
-	if (bProfileStartedCareer)
-	{
-		if ((NuzCars[FindCarIndexByHash(CareerCarHash)].Lives <= 1) && (GameMode == 1))
-		{
-			FE_SetColor_Hash(0x1AEC7D0A, PauseMenuCave2_pkgname, 0xFF404040);
-			_asm jmp PauseMenuCave2_Exit_True
-		}
-	}
-	else
-	{
-		if ((DDayCar.Lives <= 1) && (GameMode == 1))
-		{
-			FE_SetColor_Hash(0x1AEC7D0A, PauseMenuCave2_pkgname, 0xFF404040);
-			_asm jmp PauseMenuCave2_Exit_True
-		}
-	}
-
-	_asm
-	{
-		mov edx, ds:CFENG_PINSTANCE_ADDR
-		push 1
-		push edx
-		mov eax, [ebx + 0xC]
-		jmp PauseMenuCave2_Exit_False
-	}
-
-}
 
 unsigned int __stdcall PostRaceMenuScreen_Setup_Hook(unsigned int PostRaceMenuScreen, unsigned int PostRaceMenuSetupParams)
 {
@@ -2133,8 +2087,10 @@ int Init()
 	injector::MakeCALL(0x0049706E, PostRace_DoQuitRace_hook, true);
 
 	// restart button disablers
-	injector::MakeJMP(0x004CE146, PauseMenuSetup_Cave1, true);
-	injector::MakeJMP(0x004CE398, PauseMenuSetup_Cave2, true);
+	//injector::MakeJMP(0x004CE146, PauseMenuSetup_Cave1, true);
+	//injector::MakeJMP(0x004CE398, PauseMenuSetup_Cave2, true);
+	injector::MakeCALL(0x004CE151, FEngSetButtonState_Hook, true);
+	injector::MakeCALL(0x004CE3A3, FEngSetButtonState_Hook, true);
 	injector::MakeCALL(0x0049671E, PostRaceMenuScreen_Setup_Hook, true);
 	injector::MakeCALL(0x004969A6, PostRaceMenuScreen_Setup_Hook, true);
 

@@ -46,5 +46,13 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{16a7bf61-320e-429d-8723-2f85386c4e49}</UniqueIdentifier>
     </Filter>
+    <Filter Include="ini">
+      <UniqueIdentifier>{4b5d9ac8-eabf-4070-9391-1cba15590a38}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="NFSU_nuzlocke.ini">
+      <Filter>ini</Filter>
+    </None>
   </ItemGroup>
 </Project>
