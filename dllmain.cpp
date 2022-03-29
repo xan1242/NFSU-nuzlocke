@@ -4,7 +4,6 @@
 // TODO: add session saving - this game is prone to crashing regardless of this mod
 // TODO: add a points system of some sort
 // TODO: add an "extra life" system maybe
-// TODO: detect game finish
 // TODO: add difficulty locker
 // TODO: session saving maybe?
 // TODO: finish intro message
@@ -107,6 +106,7 @@ int TimeSinceLastMouseMovement = 0;
 // currentrace + 0x14 = timer
 #define CURRENTRACE_POINTER_ADDR 0x0073619C
 #define PLAYER_POINTER 0x007361BC
+#define CAREER_STATUS_ADDR 0x0075F2B5
 char* TradeCarScreen = "MU_UG_TradeCareerCar.fng";
 
 unsigned int NumberOfCars = 35; // this is a fixed value in the executable, change only if you manage to increase the car count in the game
@@ -1034,6 +1034,16 @@ void InitNuzlocke()
 
 void UpdateNuzGameStatus()
 {
+	NuzlockeStruct* car;
+
+	if (bProfileStartedCareer)
+	{
+		unsigned int ci = FindCarIndexByHash(CareerCarHash);
+		car = &NuzCars[ci];
+	}
+	else
+		car = &DDayCar;
+
 	bAllCarsLost = bCheckIfAllCarsLocked();
 
 	if (bAllCarsLost && bGameStarted)
@@ -1046,8 +1056,19 @@ void UpdateNuzGameStatus()
 			bShownGameOverOnce = true;
 		}
 	}
-	else if ((NuzCars[FindCarIndexByHash(CareerCarHash)].Lives <= 0) && bCantAffordAnyCar && bGameStarted)
+	else if ((*car).Lives <= 0 && bCantAffordAnyCar && bGameStarted)
 	{
+		bGameIsOver = true;
+		if (!bShownGameOverOnce)
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_GAMEOVER);
+			bShowGameOverScreen = true;
+			bShownGameOverOnce = true;
+		}
+	}
+	else if (*(int*)CAREER_STATUS_ADDR == 2) // career completed
+	{
+		bGameComplete = true;
 		bGameIsOver = true;
 		if (!bShownGameOverOnce)
 		{
@@ -1068,7 +1089,7 @@ void UpdateNuzGameStatus()
 
 		if (*(int*)CURRENTRACE_POINTER_ADDR == 0)
 		{
-			LastCarTime = NuzCars[FindCarIndexByHash(CareerCarHash)].TimeSpentRacing;
+			LastCarTime = (*car).TimeSpentRacing;
 			LastTotalTime = TotalTimeSpentRacing;
 		}
 
