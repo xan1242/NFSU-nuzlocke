@@ -850,6 +850,29 @@ void __declspec(naked) ChooseCareerCar_Cave()
 // time spent racing
 void __stdcall TimeCurrentCar(unsigned int in_time)
 {
+	int pointer = *(int*)PLAYER_POINTER;
+	if (pointer)
+	{
+		pointer = *(int*)(pointer + 0x95C);
+		if (pointer)
+		{
+			pointer = *(int*)(pointer + 0x30);
+			if (pointer)
+			{
+				pointer = *(int*)(pointer + 0x18);
+				if (pointer != 0)
+					bShowingRaceOver = true;
+			}
+			else
+				bShowingRaceOver = false;
+		}
+		else
+			bShowingRaceOver = false;
+	}
+	else
+		bShowingRaceOver = false;
+
+
 	NuzlockeStruct* car;
 	
 	if (bProfileStartedCareer)
@@ -860,11 +883,11 @@ void __stdcall TimeCurrentCar(unsigned int in_time)
 	else
 		car = &DDayCar;
 
-
-
-
-	(*car).TimeSpentRacing = in_time + LastCarTime;
-	TotalTimeSpentRacing = in_time + LastTotalTime;
+	if (!bShowingRaceOver)
+	{
+		(*car).TimeSpentRacing = in_time + LastCarTime;
+		TotalTimeSpentRacing = in_time + LastTotalTime;
+	}
 }
 
 // time spent in UG mode basically
@@ -1001,29 +1024,7 @@ void UpdateNuzGameStatus()
 
 	if (!bGameIsOver)
 	{
-		int pointer = *(int*)PLAYER_POINTER;
-		if (pointer)
-		{
-			pointer = *(int*)(pointer + 0x95C);
-			if (pointer)
-			{
-				pointer = *(int*)(pointer + 0x30);
-				if (pointer)
-				{
-					pointer = *(int*)(pointer + 0x18);
-					if (pointer != 0)
-						bShowingRaceOver = true;
-				}
-				else
-					bShowingRaceOver = false;
-			}
-			else
-				bShowingRaceOver = false;
-		}
-		else
-			bShowingRaceOver = false;
-
-		if ((GameFlowStatus == 6) && (GameMode == 1) && *(int*)CURRENTRACE_POINTER_ADDR && !bShowingRaceOver)
+		if ((GameFlowStatus == 6) && (GameMode == 1) && *(int*)CURRENTRACE_POINTER_ADDR)
 		{
 			TimeCurrentCar(*(unsigned int*)((*(int*)CURRENTRACE_POINTER_ADDR) + 0x14));
 		}
