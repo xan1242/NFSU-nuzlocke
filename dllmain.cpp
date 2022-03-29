@@ -28,7 +28,6 @@
 #define GAME_HWND_ADDR 0x00736380
 #define GAME_D3DDEVICE_ADDR 0x0073636C
 
-static LPDIRECT3D9              g_pD3D = NULL;
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
 bool bInitedImgui = false;
 bool bBlockedGameInput = false;
