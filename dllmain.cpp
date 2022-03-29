@@ -4,7 +4,6 @@
 // TODO: add session saving - this game is prone to crashing regardless of this mod
 // TODO: add a points system of some sort
 // TODO: add an "extra life" system maybe
-// TODO: track more stats per car - e.g. time spent racing with each car
 
 #include "NFSU_nuzlocke.h"
 #include <windows.h>
@@ -38,10 +37,18 @@ bool bShowAlreadyStartedWarning = false;
 bool bShowStatsWindow = false;
 bool bShowGameOverScreen = false;
 bool bShowCarLifeHint = false;
+bool bShowDifficultySelector = false;
 
 // Show-once bools
 bool bShownGameOverOnce = false;
 bool bShownLifeOverOnce = false;
+// permanent ones -- CONFIG
+bool bSkipIntroMessage = false;
+bool bSkipAlreadyStartedWarning = false;
+
+// HUD hide stuff -- CONFIG
+bool bHideFEHUD = false;
+bool bHideIGHUD = false;
 
 ImFont* lcd_font;
 char hud_disp_string[1024];
@@ -70,6 +77,7 @@ int TimeSinceLastMouseMovement = 0;
 // Dear ImGui declarations end
 //////////////////////////////////////////////////////////////////
 
+// Game-related addresses
 #define CAREER_CAR_TYPE_HASH_POINTER 0x75EF00
 #define FECAREERMANAGER_POINTER 0x75EEF8
 #define CARTYPEINFOARRAY_ADDRESS 0x00734588
@@ -85,10 +93,28 @@ int TimeSinceLastMouseMovement = 0;
 // currentrace + 0x14 = timer
 #define CURRENTRACE_POINTER_ADDR 0x0073619C
 #define PLAYER_POINTER 0x007361BC
+char* TradeCarScreen = "MU_UG_TradeCareerCar.fng";
 
 unsigned int NumberOfCars = 35; // this is a fixed value in the executable, change only if you manage to increase the car count in the game
 
+// difficulty-related stuff
+unsigned int NuzlockeDifficulty = 0; // 0 = easy, 1 = medium, 2 = hard/nuzlocke, 3 = ultra hard/ultra nuzlocke, 4 = custom
 unsigned int NumberOfLives = 1; // starting number of lives
+bool bAllowTradingCarMidGame = false; // option to allow/disallow car changing mid-game
+unsigned int LockedGameDifficulty = 0; // 0 = unlocked, 1 = easy, 2 = medium, 3 = hard
+
+unsigned int CustomNumberOfLives = 2;
+unsigned int CustomLockedGameDifficulty = 0;
+bool bCustomAllowTrading = false;
+bool bCustomGameLockUnlock = false;
+bool bCustomGameLockEasy = false;
+bool bCustomGameLockMedium = false;
+bool bCustomGameLockHard = false;
+
+const char CarTradingStatusNames[2][16] = { NUZLOCKE_UI_CARTRADING_DISALLOWED, NUZLOCKE_UI_CARTRADING_ALLOWED };
+const char NuzDifficultyNames[NUZLOCKED_NUZ_DIFF_COUNT][16] = { NUZLOCKE_UI_NUZ_DIFF_EASY, NUZLOCKE_UI_NUZ_DIFF_MEDIUM, NUZLOCKE_UI_NUZ_DIFF_HARD, NUZLOCKE_UI_NUZ_DIFF_ULTRAHARD , NUZLOCKE_UI_NUZ_DIFF_CUSTOM };
+const char GameDifficultyNames[4][16] = { NUZLOCKE_UI_GAME_DIFF_UNLOCKED, NUZLOCKE_UI_GAME_DIFF_EASY, NUZLOCKE_UI_GAME_DIFF_MEDIUM, NUZLOCKE_UI_GAME_DIFF_HARD};
+
 unsigned int CareerCarHash = 0; // currently selected car in career mode (not initialized until DDay is completed)
 unsigned int GameFlowStatus = 0;
 unsigned int Money = 0;
@@ -98,7 +124,6 @@ unsigned int OldGameMode = 0;
 unsigned int LastCarTime = 0;
 unsigned int LastTotalTime = 0;
 unsigned int LastTotalPlayTime = 0;
-//unsigned int CaughtRaceTimerObj = 0;
 
 unsigned int GameMode = 0; // 1 = career mode, others are quickrace or online modes
 unsigned int RaceType = 0; // quick race - race type, currently unused
@@ -109,13 +134,11 @@ bool bAllCarsLost = false; // if player got all their cars on 0 lives
 bool bGameComplete = false; // if player beats UG mode with Nuzlocke -- TODO: add detection
 bool bGameStarted = false; // should start right after entering career mode
 bool bProfileStartedCareer = false;
-bool bAllowTradingCarMidGame = false; // option to allow/disallow car changing mid-game
 bool bRaceFinished = false;
 bool bShowingRaceOver = false;
 bool bMarkedStatusAlready = false;
 
 unsigned int UnlockedCarCount = 0; // we MUST keep track of this -- if the player has 1 car unlocked, trade menu CANNOT open
-char* TradeCarScreen = "MU_UG_TradeCareerCar.fng";
 
 // some extra stats
 unsigned int TotalLivesLost = 0;
@@ -214,7 +237,6 @@ unsigned int FEngSwitchPackages_Addr = 0x004F6360;
 unsigned int FEngSendMessageToPackage_Addr = 0x004C96C0;
 unsigned int LaunchPartsBrowser_Addr = 0x00504990;
 unsigned int uUserStartedCareer_Addr = 0x004B2AA0;
-unsigned int Timer_PrintToString_Addr = 0x00586580;
 
 unsigned int __stdcall FEHashUpper(const char* str)
 {
@@ -339,20 +361,6 @@ void __stdcall UpdateCarPricing(unsigned int unk1, unsigned int unk2)
 		call sub_4C2D20
 	}
 }
-
-#pragma runtime_checks( "", off )
-void __stdcall Timer_PrintToString(void* obj, char* outstr, int unk)
-{
-	_asm
-	{
-		mov eax, unk
-		push outstr
-		mov edi, obj
-		call Timer_PrintToString_Addr
-		//add esp, 4
-	}
-}
-#pragma runtime_checks( "", restore )
 
 unsigned int IsCarUnlocked_Addr = 0x005A1630;
 bool __stdcall IsCarUnlocked(unsigned int hash, unsigned int careermanager)
@@ -1484,16 +1492,23 @@ void ShowIntroMessage()
 		ImGui::Text("Nuzlocke intro text goes here");
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
+		ImGui::Checkbox("Don't show again", &bSkipIntroMessage);
+		ImGui::Separator();
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 			ImGui::SetKeyboardFocusHere(0);
 		if (ImGui::Button(NUZLOCKE_UI_CLOSE_TXT))
 			bShowIntroMessage = false;
 		ImGui::EndPopup();
 	}
-	if (!bShowIntroMessage && bProfileStartedCareer)
+	if (!bShowIntroMessage && bProfileStartedCareer && !bSkipAlreadyStartedWarning)
 	{
 		ImGui::OpenPopup(NUZLOCKE_HEADER_PROFILEWARNING);
 		bShowAlreadyStartedWarning = true;
+	}
+	if (!bShowIntroMessage && !bProfileStartedCareer)
+	{
+		ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+		bShowDifficultySelector = true;
 	}
 }
 
@@ -1508,11 +1523,18 @@ void ShowAlreadyLoadedWarning()
 		ImGui::Text(NUZLOCKE_ALREADYSTARTED_WARNING_MSG);
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
+		ImGui::Checkbox("Don't show again", &bSkipAlreadyStartedWarning);
+		ImGui::Separator();
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 			ImGui::SetKeyboardFocusHere(0);
 		if (ImGui::Button(NUZLOCKE_UI_CLOSE_TXT))
 			bShowAlreadyStartedWarning = false;
 		ImGui::EndPopup();
+	}
+	if (!bShowAlreadyStartedWarning)
+	{
+		ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+		bShowDifficultySelector = true;
 	}
 }
 
@@ -1618,6 +1640,112 @@ void ShowCarLifeHint()
 	}
 }
 
+void ShowDifficultySelector()
+{
+	ImGui::SetNextWindowSize(ImVec2(800.0, 0.0));
+	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_DIFFICULTY, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::PushTextWrapPos();
+		ImGui::Text("Difficulty: %s\nNumber of lives: %d\nCar trading: %s\nGame difficulty lock: %s\n", NuzDifficultyNames[NuzlockeDifficulty], NumberOfLives, CarTradingStatusNames[bAllowTradingCarMidGame], GameDifficultyNames[LockedGameDifficulty]);
+		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		// EASY
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_EASY))
+		{
+			bShowDifficultySelector = false;
+		}
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		{
+			NuzlockeDifficulty = NUZLOCKE_DIFF_EASY;
+			NumberOfLives = NUZLOCKE_DIFF_EASY_LIVES;
+			bAllowTradingCarMidGame = NUZLOCKE_DIFF_EASY_TRADING;
+			LockedGameDifficulty = NUZLOCKE_DIFF_EASY_LOCKEDDIFF;
+		}
+		// MEDIUM
+		//if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+		//	ImGui::SetKeyboardFocusHere(0);
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_MEDIUM))
+		{
+			bShowDifficultySelector = false;
+		}
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		{
+			NuzlockeDifficulty = NUZLOCKE_DIFF_MEDIUM;
+			NumberOfLives = NUZLOCKE_DIFF_MEDIUM_LIVES;
+			bAllowTradingCarMidGame = NUZLOCKE_DIFF_MEDIUM_TRADING;
+			LockedGameDifficulty = NUZLOCKE_DIFF_MEDIUM_LOCKEDDIFF;
+		}
+
+		// HARD
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_HARD))
+		{
+			bShowDifficultySelector = false;
+		}
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		{
+			NuzlockeDifficulty = NUZLOCKE_DIFF_HARD;
+			NumberOfLives = NUZLOCKE_DIFF_HARD_LIVES;
+			bAllowTradingCarMidGame = NUZLOCKE_DIFF_HARD_TRADING;
+			LockedGameDifficulty = NUZLOCKE_DIFF_HARD_LOCKEDDIFF;
+		}
+
+		// ULTRA HARD
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_ULTRAHARD))
+		{
+			bShowDifficultySelector = false;
+		}
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		{
+			NuzlockeDifficulty = NUZLOCKE_DIFF_ULTRAHARD;
+			NumberOfLives = NUZLOCKE_DIFF_ULTRAHARD_LIVES;
+			bAllowTradingCarMidGame = NUZLOCKE_DIFF_ULTRAHARD_TRADING;
+			LockedGameDifficulty = NUZLOCKE_DIFF_ULTRAHARD_LOCKEDDIFF;
+		}
+
+		// CUSTOM
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_CUSTOM))
+		{
+			bShowDifficultySelector = false;
+		}
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		{
+			NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
+			NumberOfLives = CustomNumberOfLives;
+			bAllowTradingCarMidGame = bCustomAllowTrading;
+			LockedGameDifficulty = CustomLockedGameDifficulty;
+		}
+		ImGui::Separator();
+		if (ImGui::CollapsingHeader("Custom settings", ImGuiTreeNodeFlags_None))
+		{
+			ImGui::InputInt("Lives", (int*)&CustomNumberOfLives, 1, 100, ImGuiInputTextFlags_CharsDecimal);
+			if ((int)CustomNumberOfLives < 0)
+				CustomNumberOfLives = 0;
+			ImGui::Checkbox("Car trading", &bCustomAllowTrading);
+			ImGui::TextUnformatted("Game difficulty lock:");
+			ImGui::RadioButton("Unlocked", (int*)&CustomLockedGameDifficulty, 0);
+			ImGui::RadioButton("Easy##Game", (int*)&CustomLockedGameDifficulty, 1);
+			ImGui::RadioButton("Medium##Game", (int*)&CustomLockedGameDifficulty, 2);
+			ImGui::RadioButton("Hard##Game", (int*)&CustomLockedGameDifficulty, 3);
+
+			NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
+			NumberOfLives = CustomNumberOfLives;
+			bAllowTradingCarMidGame = bCustomAllowTrading;
+			LockedGameDifficulty = CustomLockedGameDifficulty;
+		}
+		ImGui::EndPopup();
+	}
+
+	if (!bShowDifficultySelector)
+	{
+		ResetNuzlocke();
+		if (bProfileStartedCareer) // if we've already started career, start the game immediately
+			bGameStarted = true;
+		else
+			bGameStarted = false;
+	}
+
+}
+
 void ShowWindows()
 {
 	//ShowDebugWindow();
@@ -1627,9 +1755,9 @@ void ShowWindows()
 		ShowGameOverScreen();
 	}
 
-	if ((GameFlowStatus == 3) && GameMode == 1)
+	if ((GameFlowStatus == 3) && GameMode == 1 && !bHideFEHUD)
 		DrawFEHUD();
-	if ((GameFlowStatus == 6) && GameMode == 1 && !*(bool*)GAMEPAUSED_ADDR)
+	if ((GameFlowStatus == 6) && GameMode == 1 && !*(bool*)GAMEPAUSED_ADDR && !bHideIGHUD)
 		DrawIGHUD();
 
 	if (bShowStatsWindow)
@@ -1640,6 +1768,8 @@ void ShowWindows()
 		ShowAlreadyLoadedWarning();
 	if (bShowCarLifeHint)
 		ShowCarLifeHint();
+	if (bShowDifficultySelector)
+		ShowDifficultySelector();
 }
 
 
@@ -1788,16 +1918,18 @@ void ImguiIO_SetAcceptButton(ImGuiIO& io)
 // Called after profile has changed
 void OnProfileChange()
 {
-	ResetNuzlocke();
 	bProfileStartedCareer = bUserStartedCareer();
 
-	if (bProfileStartedCareer) // if we've already started career, start the game immediately
-		bGameStarted = true;
+	if (!bSkipIntroMessage)
+	{
+		ImGui::OpenPopup(NUZLOCKE_HEADER_INTRO);
+		bShowIntroMessage = true;
+	}
 	else
-		bGameStarted = false;
-
-	ImGui::OpenPopup(NUZLOCKE_HEADER_INTRO);
-	bShowIntroMessage = true;
+	{
+		ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+		bShowDifficultySelector = true;
+	}
 }
 
 #pragma runtime_checks( "", off )
@@ -1907,8 +2039,6 @@ int Init()
 
 	// hook in RaceCoordinator::TheRaceHasFinished to mark the end of race
 	injector::MakeCALL(0x00423F60, GameFlowManager_IsPaused_Hook, true);
-	// hook in RacePosition::Update
-	//injector::MakeCALL(0x004A03A7, Timer_PrintToString_Hook, true);
 
 	// UndergroundMenu vtable hook
 	injector::WriteMemory<unsigned int>(0x006C2D9C, (unsigned int)&UndergroundMenuScreen_NotificationMessage_Hook, true);
