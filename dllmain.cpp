@@ -1607,8 +1607,6 @@ void ShowIntroMessage()
 	ImGui::SetNextWindowSize(ImVec2(800.0, 0.0));
 	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_INTRO, &bShowIntroMessage, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		ImGui::Text("NUZLOCKE INTRO");
-		ImGui::Separator();
 		ImGui::PushTextWrapPos();
 		ImGui::Text("Nuzlocke intro text goes here");
 		ImGui::PopTextWrapPos();
@@ -1797,8 +1795,6 @@ void ShowDifficultySelector()
 			bFocusedAlready = true;
 		}
 		// MEDIUM
-		//if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
-		//	ImGui::SetKeyboardFocusHere(0);
 		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_MEDIUM))
 		{
 			bShowDifficultySelector = false;
@@ -1891,7 +1887,6 @@ void ShowDifficultySelector()
 		else
 			bGameStarted = false;
 	}
-
 }
 
 void ShowWindows()
