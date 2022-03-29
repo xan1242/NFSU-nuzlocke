@@ -1640,11 +1640,21 @@ void ShowCarLifeHint()
 	}
 }
 
+void UpdateCustomDifficultySettings()
+{
+	NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
+	NumberOfLives = CustomNumberOfLives;
+	bAllowTradingCarMidGame = bCustomAllowTrading;
+	LockedGameDifficulty = CustomLockedGameDifficulty;
+}
+
 void ShowDifficultySelector()
 {
 	ImGui::SetNextWindowSize(ImVec2(800.0, 0.0));
 	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_DIFFICULTY, NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
+		bool bFocusedAlready = false;
+
 		ImGui::PushTextWrapPos();
 		ImGui::Text("Difficulty: %s\nNumber of lives: %d\nCar trading: %s\nGame difficulty lock: %s\n", NuzDifficultyNames[NuzlockeDifficulty], NumberOfLives, CarTradingStatusNames[bAllowTradingCarMidGame], GameDifficultyNames[LockedGameDifficulty]);
 		ImGui::PopTextWrapPos();
@@ -1660,6 +1670,7 @@ void ShowDifficultySelector()
 			NumberOfLives = NUZLOCKE_DIFF_EASY_LIVES;
 			bAllowTradingCarMidGame = NUZLOCKE_DIFF_EASY_TRADING;
 			LockedGameDifficulty = NUZLOCKE_DIFF_EASY_LOCKEDDIFF;
+			bFocusedAlready = true;
 		}
 		// MEDIUM
 		//if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
@@ -1668,12 +1679,13 @@ void ShowDifficultySelector()
 		{
 			bShowDifficultySelector = false;
 		}
-		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused() && !bFocusedAlready)
 		{
 			NuzlockeDifficulty = NUZLOCKE_DIFF_MEDIUM;
 			NumberOfLives = NUZLOCKE_DIFF_MEDIUM_LIVES;
 			bAllowTradingCarMidGame = NUZLOCKE_DIFF_MEDIUM_TRADING;
 			LockedGameDifficulty = NUZLOCKE_DIFF_MEDIUM_LOCKEDDIFF;
+			bFocusedAlready = true;
 		}
 
 		// HARD
@@ -1681,12 +1693,13 @@ void ShowDifficultySelector()
 		{
 			bShowDifficultySelector = false;
 		}
-		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused() && !bFocusedAlready)
 		{
 			NuzlockeDifficulty = NUZLOCKE_DIFF_HARD;
 			NumberOfLives = NUZLOCKE_DIFF_HARD_LIVES;
 			bAllowTradingCarMidGame = NUZLOCKE_DIFF_HARD_TRADING;
 			LockedGameDifficulty = NUZLOCKE_DIFF_HARD_LOCKEDDIFF;
+			bFocusedAlready = true;
 		}
 
 		// ULTRA HARD
@@ -1694,12 +1707,13 @@ void ShowDifficultySelector()
 		{
 			bShowDifficultySelector = false;
 		}
-		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused() && !bFocusedAlready)
 		{
 			NuzlockeDifficulty = NUZLOCKE_DIFF_ULTRAHARD;
 			NumberOfLives = NUZLOCKE_DIFF_ULTRAHARD_LIVES;
 			bAllowTradingCarMidGame = NUZLOCKE_DIFF_ULTRAHARD_TRADING;
 			LockedGameDifficulty = NUZLOCKE_DIFF_ULTRAHARD_LOCKEDDIFF;
+			bFocusedAlready = true;
 		}
 
 		// CUSTOM
@@ -1707,25 +1721,38 @@ void ShowDifficultySelector()
 		{
 			bShowDifficultySelector = false;
 		}
-		if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+		if (ImGui::IsItemHovered() || ImGui::IsItemFocused() && !bFocusedAlready)
 		{
-			NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
-			NumberOfLives = CustomNumberOfLives;
-			bAllowTradingCarMidGame = bCustomAllowTrading;
-			LockedGameDifficulty = CustomLockedGameDifficulty;
+			UpdateCustomDifficultySettings();
+			bFocusedAlready = true;
 		}
 		ImGui::Separator();
 		if (ImGui::CollapsingHeader("Custom settings", ImGuiTreeNodeFlags_None))
 		{
-			ImGui::InputInt("Lives", (int*)&CustomNumberOfLives, 1, 100, ImGuiInputTextFlags_CharsDecimal);
+			bool bChangedSetting = false;
+
+			if (ImGui::InputInt("Lives", (int*)&CustomNumberOfLives, 1, 100, ImGuiInputTextFlags_CharsDecimal))
+				bChangedSetting = true;
+
 			if ((int)CustomNumberOfLives < 0)
 				CustomNumberOfLives = 0;
-			ImGui::Checkbox("Car trading", &bCustomAllowTrading);
+
+			if (ImGui::Checkbox("Car trading", &bCustomAllowTrading))
+				bChangedSetting = true;
+
 			ImGui::TextUnformatted("Game difficulty lock:");
-			ImGui::RadioButton("Unlocked", (int*)&CustomLockedGameDifficulty, 0);
-			ImGui::RadioButton("Easy##Game", (int*)&CustomLockedGameDifficulty, 1);
-			ImGui::RadioButton("Medium##Game", (int*)&CustomLockedGameDifficulty, 2);
-			ImGui::RadioButton("Hard##Game", (int*)&CustomLockedGameDifficulty, 3);
+			
+			if (ImGui::RadioButton("Unlocked", (int*)&CustomLockedGameDifficulty, 0))
+				bChangedSetting = true;
+			if (ImGui::RadioButton("Easy##Game", (int*)&CustomLockedGameDifficulty, 1))
+				bChangedSetting = true;
+			if (ImGui::RadioButton("Medium##Game", (int*)&CustomLockedGameDifficulty, 2))
+				bChangedSetting = true;
+			if (ImGui::RadioButton("Hard##Game", (int*)&CustomLockedGameDifficulty, 3))
+				bChangedSetting = true;
+
+			if (bChangedSetting)
+				UpdateCustomDifficultySettings();
 
 			/*NuzlockeDifficulty = NUZLOCKE_DIFF_CUSTOM;
 			NumberOfLives = CustomNumberOfLives;
@@ -1899,7 +1926,7 @@ void UpdateFECursorPos()
 
 }
 
-// put "Return / Enter" to be the default accept button instead of "Space" to make it more convenient
+// put "Return / Enter" to be the default accept button instead of "Space" to make it more convenient -- TODO: fix this
 void ImguiIO_SetAcceptButton(ImGuiIO& io)
 {
 	 // using Win32 here since it responds better than ImGui (isn't overzelaous and quick with reading inputs)
@@ -1984,7 +2011,9 @@ void __stdcall MainLoopHook()
 	if (!bBlockedGameInput)
 		UpdateFECursorPos();
 
-	ImguiIO_SetAcceptButton(io);
+	// commented out because it breaks if a gamepad is connected...
+	//ImguiIO_SetAcceptButton(io);
+
 	ImguiUpdate();
 	ShowWindows();
 	UpdateNuzGameStatus();
