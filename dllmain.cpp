@@ -1539,10 +1539,7 @@ void ShowStatsWindow()
 	else
 		ImGui::Text("Lives: %d\nCar: %s", DDayCar.Lives, DDayCar.CarName);
 	ImGui::Separator();
-	ImGui::Text("Cars available: %d", UnlockedCarCount);
-	ImGui::Text("Total wins: %d", TotalWins);
-	ImGui::Text("Total losses: %d", TotalLosses);
-	ImGui::Text("Total lives lost: %d", TotalLivesLost);
+	ImGui::Text("Cars available: %d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d", UnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost);
 
 	int mins = 0;
 	int sec = 0;
