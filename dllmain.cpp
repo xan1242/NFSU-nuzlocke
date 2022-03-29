@@ -959,8 +959,6 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 	_asm mov thethis, ecx
 	unsigned int DifficultyHash[3] = {0};
 
-	printf("In UndergroundBriefScreen!!!\n");
-
 	if ((GameMode == 1) && !bGameIsOver && LockedGameDifficulty)
 	{
 		switch (LockedGameDifficulty)
