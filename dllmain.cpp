@@ -7,7 +7,6 @@
 // TODO: add difficulty locker
 // TODO: session saving maybe?
 // TODO: finish intro message
-// TODO: config file
 // TODO: (for fun) add an option to turn traffic AI to race AI:
 // to do that:
 // injector::WriteMemory<unsigned int>(0x0044AB40, 0x44AA3F, true);
@@ -24,6 +23,7 @@
 #include <math.h>
 #include <timeapi.h>
 #include "includes\injector\injector.hpp"
+#include "inireader\IniReader.h"
 
 //////////////////////////////////////////////////////////////////
 // Dear ImGui declarations
@@ -120,10 +120,6 @@ unsigned int LockedGameDifficulty = 0; // 0 = unlocked, 1 = easy, 2 = medium, 3 
 unsigned int CustomNumberOfLives = 2;
 unsigned int CustomLockedGameDifficulty = 0;
 bool bCustomAllowTrading = false;
-bool bCustomGameLockUnlock = false;
-bool bCustomGameLockEasy = false;
-bool bCustomGameLockMedium = false;
-bool bCustomGameLockHard = false;
 
 const char CarTradingStatusNames[2][16] = { NUZLOCKE_UI_CARTRADING_DISALLOWED, NUZLOCKE_UI_CARTRADING_ALLOWED };
 const char NuzDifficultyNames[NUZLOCKED_NUZ_DIFF_COUNT][16] = { NUZLOCKE_UI_NUZ_DIFF_EASY, NUZLOCKE_UI_NUZ_DIFF_MEDIUM, NUZLOCKE_UI_NUZ_DIFF_HARD, NUZLOCKE_UI_NUZ_DIFF_ULTRAHARD , NUZLOCKE_UI_NUZ_DIFF_CUSTOM };
@@ -145,7 +141,7 @@ unsigned int RaceType = 0; // quick race - race type, currently unused
 bool bGameIsOver = false;
 bool bCantAffordAnyCar = false; // if player lost lives on current car and can't afford any = game over
 bool bAllCarsLost = false; // if player got all their cars on 0 lives
-bool bGameComplete = false; // if player beats UG mode with Nuzlocke -- TODO: add detection
+bool bGameComplete = false; // if player beats UG mode with Nuzlocke
 bool bGameStarted = false; // should start right after entering career mode
 bool bProfileStartedCareer = false;
 bool bRaceFinished = false;
@@ -235,6 +231,42 @@ unsigned int GameWndProcAddr = 0;
 LRESULT(WINAPI* GameWndProc)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 //////////////////////////////////////////////////////////////////
 // Function pointers end
+//////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////
+// Inireader
+//////////////////////////////////////////////////////////////////
+
+void UpdateIniFile()
+{
+	CIniReader inireader("");
+
+	inireader.WriteInteger("Nuzlocke", "SkipIntroMessage", bSkipIntroMessage);
+	inireader.WriteInteger("Nuzlocke", "SkipAlreadyStartedWarning", bSkipAlreadyStartedWarning);
+	inireader.WriteInteger("Nuzlocke", "HideFEHUD", bHideFEHUD);
+	inireader.WriteInteger("Nuzlocke", "HideIGHUD", bHideIGHUD);
+
+	inireader.WriteInteger("CustomGame", "NumberOfLives", CustomNumberOfLives);
+	inireader.WriteInteger("CustomGame", "AllowTrading", bCustomAllowTrading);
+	inireader.WriteInteger("CustomGame", "LockedGameDifficulty", CustomLockedGameDifficulty);
+}
+
+void ReadIniFile()
+{
+	CIniReader inireader("");
+
+	bSkipIntroMessage = inireader.ReadInteger("Nuzlocke", "SkipIntroMessage", 0);
+	bSkipAlreadyStartedWarning = inireader.ReadInteger("Nuzlocke", "SkipAlreadyStartedWarning", 0);
+	bHideFEHUD = inireader.ReadInteger("Nuzlocke", "HideFEHUD", 0);
+	bHideIGHUD = inireader.ReadInteger("Nuzlocke", "HideIGHUD", 0);
+
+	CustomNumberOfLives = inireader.ReadInteger("CustomGame", "NumberOfLives", 2);
+	bCustomAllowTrading = inireader.ReadInteger("CustomGame", "AllowTrading", 1);
+	CustomLockedGameDifficulty = inireader.ReadInteger("CustomGame", "LockedGameDifficulty", 0);
+}
+
+//////////////////////////////////////////////////////////////////
+// Inireader end
 //////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////
@@ -1527,7 +1559,8 @@ void ShowIntroMessage()
 		ImGui::Text("Nuzlocke intro text goes here");
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
-		ImGui::Checkbox("Don't show again", &bSkipIntroMessage);
+		if (ImGui::Checkbox("Don't show again", &bSkipIntroMessage))
+			UpdateIniFile();
 		ImGui::Separator();
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 			ImGui::SetKeyboardFocusHere(0);
@@ -1558,7 +1591,8 @@ void ShowAlreadyLoadedWarning()
 		ImGui::Text(NUZLOCKE_ALREADYSTARTED_WARNING_MSG);
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
-		ImGui::Checkbox("Don't show again", &bSkipAlreadyStartedWarning);
+		if (ImGui::Checkbox("Don't show again", &bSkipAlreadyStartedWarning))
+			UpdateIniFile();
 		ImGui::Separator();
 		if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
 			ImGui::SetKeyboardFocusHere(0);
@@ -1681,6 +1715,7 @@ void UpdateCustomDifficultySettings()
 	NumberOfLives = CustomNumberOfLives;
 	bAllowTradingCarMidGame = bCustomAllowTrading;
 	LockedGameDifficulty = CustomLockedGameDifficulty;
+	UpdateIniFile();
 }
 
 void ShowDifficultySelector()
@@ -1980,6 +2015,8 @@ void ImguiIO_SetAcceptButton(ImGuiIO& io)
 // Called after profile has changed
 void OnProfileChange()
 {
+	ReadIniFile();
+
 	bProfileStartedCareer = bUserStartedCareer();
 
 	if (!bSkipIntroMessage)
@@ -2145,6 +2182,9 @@ int Init()
 	injector::MakeNOP(0x00408B04, 5, true);
 	// disable PC_CURSOR texture to avoid duplicate cursors
 	injector::WriteMemory<unsigned int>(0x004F30A1, 0, true);
+
+	// read config
+	ReadIniFile();
 
 	return 0;
 }
