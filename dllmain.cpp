@@ -4,6 +4,19 @@
 // TODO: add session saving - this game is prone to crashing regardless of this mod
 // TODO: add a points system of some sort
 // TODO: add an "extra life" system maybe
+// TODO: detect game finish
+// TODO: add difficulty locker
+// TODO: session saving maybe?
+// TODO: finish intro message
+// TODO: (for fun) add an option to turn traffic AI to race AI:
+// to do that:
+// injector::WriteMemory<unsigned int>(0x0044AB40, 0x44AA3F, true);
+// injector::WriteMemory<unsigned int>(0x0044AB44, 0x44AA3F, true);
+// injector::MakeJMP(0x0044AAF3, 0x0044AA3F, true);
+// injector::MakeJMP(0x0044D817, 0x0044D7D2, true);
+// injector::MakeJMP(0x0044D82E, 0x0044D7D2, true);
+// works but it's injected, we need to code cave it to make it a variable setting
+
 
 #include "NFSU_nuzlocke.h"
 #include <windows.h>
