@@ -108,6 +108,12 @@ unsigned int LockedGameDifficulty = 0; // 0 = unlocked, 1 = medium, 2 = hard
 // VARIABLE FOR FUN - force traffic cars into race paths (independent of difficulty)
 bool bTrafficRacers = false;
 
+// miscellaneous
+#define MINIWORLD_NUMVISIBLESEGMENTS_MAIN_ADDR 0x006FB048
+#define MINIWORLD_NUMVISIBLESEGMENTS_REF_ADDR 0x006FB04C
+#define MINIWORLD_NUMVISIBLESEGMENTS_ENV_ADDR 0x006FB050
+bool bIncreaseMiniworldSegments = true;
+
 unsigned int CustomNumberOfLives = 2;
 unsigned int CustomLockedGameDifficulty = 0;
 bool bCustomAllowTrading = false;
@@ -266,6 +272,8 @@ void ReadIniFile()
 	CustomNumberOfLives = inireader.ReadInteger("CustomGame", "NumberOfLives", 2);
 	bCustomAllowTrading = inireader.ReadInteger("CustomGame", "AllowTrading", 1);
 	CustomLockedGameDifficulty = inireader.ReadInteger("CustomGame", "LockedGameDifficulty", 0);
+
+	bIncreaseMiniworldSegments = inireader.ReadInteger("Misc", "IncreaseMiniworldSegments", 1);
 }
 
 //////////////////////////////////////////////////////////////////
@@ -1366,8 +1374,8 @@ void DrawFEHUD()
 	char disp_string[64];
 	sprintf(disp_string, "Car: %s // Lives: %d\nCars Available: %d/%d", (*car).CarName, (*car).Lives, UnlockedCarCount, GameUnlockedCarCount);
 
-	float text_width = ImGui::CalcTextSize(disp_string).x + 8 ;
-	float text_height = ImGui::GetTextLineHeightWithSpacing() + 4;
+	float text_width = ImGui::CalcTextSize(disp_string).x + 8;
+	float text_height = (ImGui::GetTextLineHeightWithSpacing() + 4) * 2;
 	float max_width = 0; // we need to work with max 16:9 aspect ratio
 	float ratio = 0;
 	float width_diff = 0;
@@ -1382,28 +1390,25 @@ void DrawFEHUD()
 									| ImGuiWindowFlags_NoScrollWithMouse
 									| ImGuiWindowFlags_NoScrollbar;
 
-	
-
 	// put it in the upper-left corner of the FE (calculated from screen centre)
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+	ratio = main_viewport->Size.x / main_viewport->Size.y;
 	// if we're working with a widescreen aspect ratio that is larger than 16:9 (ultrawide) then clamp the width to its 16:9 equivalent
 	// this may be removed if UG1's FE gets revamped for widescreen and ultrawide
-	if ((ratio > (1.333333)) && (main_viewport->Size.x > main_viewport->Size.y))
-		max_width = main_viewport->Size.y * (1.333333);
+	if ((ratio > (1.777777)) && (main_viewport->Size.x > main_viewport->Size.y))
+		max_width = main_viewport->Size.y * (1.777777);
 	else
 		max_width = main_viewport->Size.x;
 
 	width_diff = (main_viewport->Size.x - max_width) / 2;
 
-
-	ImGui::SetNextWindowSize(ImVec2(text_width, text_height * 2));
-	ImGui::SetNextWindowPos(ImVec2(((max_width / 2) - (text_width / 2))* 0.3 + width_diff, 5));
-	
+	ImGui::SetNextWindowSize(ImVec2(text_width, text_height));
+	//ImGui::SetNextWindowPos(ImVec2(((max_width / 2) - (text_width / 2))* 0.3 + width_diff, 5));	
+	ImGui::SetNextWindowPos(ImVec2(width_diff + 35.0, 5));
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 6));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0);
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.047, 0.2, 0.282, 0.8));
-	
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.047, 0.2, 0.282, 0.8));	
 
 	ImGui::Begin("FEHud", NULL, window_flags);
 
@@ -1416,10 +1421,6 @@ void DrawFEHUD()
 	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.745, 0.843, 0.878, 1.0));
 	ImGui::TextUnformatted(disp_string);
 	ImGui::PopStyleColor();
-
-	//ImGui::Text("Car: %s Lives: %d", (*car).CarName, NuzCars[ci].Lives);
-
-
 
 	ImGui::End();
 }
@@ -1444,15 +1445,18 @@ void DrawIGHUD()
 	sprintf(hud_disp_string, "Lives: %d\nCars: %d/%d\nRacing: %03d:%02d.%02d\nTotal: %04d:%02d.%02d", (*car).Lives, UnlockedCarCount, GameUnlockedCarCount, 888, 88, 88, 8888, 88, 88);
 
 	float text_width = ImGui::CalcTextSize(hud_disp_string).x + 22 ;
-	float text_height = (ImGui::GetTextLineHeightWithSpacing() + 2) * 4;
+	float text_height = ((ImGui::GetTextLineHeightWithSpacing() - 1) * 4);
 	float max_width = 0; // we need to work with max 16:9 aspect ratio
 	float width_scaler = 0;
 	float width_diff = 0;
 	float ratio = 0;
-	float lcd_font_align = 6;
-	
+	float lcd_font_align = 7.5;
 
-	// make a non-interactive window for status display in FE
+	ImVec4 dark_blue = ImVec4(0, 0.501, 0.752, 1.0);
+	ImVec4 light_blue = ImVec4(0.584, 0.741, 0.992, 1.0);
+	ImVec4 bg_color = ImVec4(0.0, 0.0, 0.0, 0.4);
+	
+	// make a non-interactive window for status display in game
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration
 		| ImGuiWindowFlags_NoMove
 		| ImGuiWindowFlags_NoBringToFrontOnFocus
@@ -1485,12 +1489,15 @@ void DrawIGHUD()
 	// position = above tachometer
 	//ImGui::SetNextWindowPos(ImVec2(((max_width) - (text_width / 2)) * width_scaler + width_diff, ((main_viewport->Size.y / 2) - (text_height / 2)) * 1.35));
 	// NEW POSITION = bottom left corner - this decision was brought later because it didn't hide originally while it was paused, now it does, so the corner is free
-	ImGui::SetNextWindowPos(ImVec2(width_diff + 28.0, main_viewport->Size.y - text_height - 20.0));
+	if (ratio > (1.3333333333))
+		ImGui::SetNextWindowPos(ImVec2(width_diff + 45.0, main_viewport->Size.y - text_height - 35.0)); // widescreen fix position
+	else
+		ImGui::SetNextWindowPos(ImVec2(width_diff + 28.0, main_viewport->Size.y - text_height - 20.0)); // 4:3 position
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 6));
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0);
 
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0, 0.0, 0.0, 0.4));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, bg_color);
 	ImGui::Begin("IGHud", NULL, window_flags);
 	ImGui::PopStyleColor();
 
@@ -1499,12 +1506,11 @@ void DrawIGHUD()
 
 	//ImGui::SetWindowFontScale(IGHUD_FONT_SCALE);
 
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.584, 0.741, 0.992, 1.0));
-	//ImGui::TextUnformatted(disp_string);
+	ImGui::PushStyleColor(ImGuiCol_Text, light_blue);
 
 	// LIVES
 	// set darker color
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0.501, 0.752, 1.0));
+	ImGui::PushStyleColor(ImGuiCol_Text, dark_blue);
 	ImGui::TextUnformatted("Lives:");
 	ImGui::PopStyleColor();
 
@@ -1524,7 +1530,7 @@ void DrawIGHUD()
 	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align));
 	
 	// set darker color
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0.501, 0.752, 1.0));
+	ImGui::PushStyleColor(ImGuiCol_Text, dark_blue);
 	ImGui::TextUnformatted("Cars:");
 	ImGui::PopStyleColor();
 
@@ -1539,9 +1545,9 @@ void DrawIGHUD()
 	// align non-lcd font
 	ImGui::SameLine(0, 0);
 	curpos = ImGui::GetCursorPos();
-	ImGui::SetCursorPos(ImVec2(curpos.x + 6, curpos.y + lcd_font_align + 2));
+	ImGui::SetCursorPos(ImVec2(curpos.x + 4, curpos.y + lcd_font_align + 1.25));
 	// set darker color
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0.501, 0.752, 1.0));
+	ImGui::PushStyleColor(ImGuiCol_Text, dark_blue);
 	ImGui::TextUnformatted("/");
 	ImGui::PopStyleColor();
 	// lcd font again
@@ -1549,7 +1555,7 @@ void DrawIGHUD()
 	ImGui::PushFont(lcd_font);
 	// align lcd font
 	curpos = ImGui::GetCursorPos();
-	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align - 2));
+	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align - 1.25));
 
 	ImGui::Text("%d", GameUnlockedCarCount);
 	ImGui::PopFont();
@@ -1560,7 +1566,7 @@ void DrawIGHUD()
 	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align));
 
 	// set darker color
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0.501, 0.752, 1.0));
+	ImGui::PushStyleColor(ImGuiCol_Text, dark_blue);
 	ImGui::TextUnformatted("Racing:");
 	ImGui::PopStyleColor();
 
@@ -1580,7 +1586,7 @@ void DrawIGHUD()
 	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align));
 
 	// set darker color
-	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0.501, 0.752, 1.0));
+	ImGui::PushStyleColor(ImGuiCol_Text, dark_blue);
 	ImGui::TextUnformatted("Total:");
 	ImGui::PopStyleColor();
 
@@ -1595,10 +1601,6 @@ void DrawIGHUD()
 	ImGui::PopFont();
 
 	ImGui::PopStyleColor();
-
-	//ImGui::Text("Car: %s Lives: %d", NuzCars[ci].CarName, NuzCars[ci].Lives);
-
-
 
 	ImGui::End();
 }
@@ -2440,6 +2442,14 @@ int Init()
 	injector::MakeNOP(0x00408B04, 5, true);
 	// disable PC_CURSOR texture to avoid duplicate cursors
 	injector::WriteMemory<unsigned int>(0x004F30A1, 0, true);
+
+	// misc stuff, unrelated to the main functions of this mod but harmless
+	if (bIncreaseMiniworldSegments)
+	{
+		*(int*)MINIWORLD_NUMVISIBLESEGMENTS_MAIN_ADDR = 10;
+		*(int*)MINIWORLD_NUMVISIBLESEGMENTS_REF_ADDR = 5;
+		*(int*)MINIWORLD_NUMVISIBLESEGMENTS_ENV_ADDR = 5;
+	}
 
 	// read config
 	ReadIniFile();
