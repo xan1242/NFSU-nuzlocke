@@ -123,6 +123,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="NFSU_nuzlocke.ini" />
+    <None Include="Rules.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

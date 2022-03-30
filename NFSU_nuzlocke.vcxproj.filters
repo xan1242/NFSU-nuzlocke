@@ -54,5 +54,6 @@
     <None Include="NFSU_nuzlocke.ini">
       <Filter>ini</Filter>
     </None>
+    <None Include="Rules.md" />
   </ItemGroup>
 </Project>
