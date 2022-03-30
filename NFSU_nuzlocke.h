@@ -1,6 +1,25 @@
 #pragma once
 #define NUZLOCKE_ALREADYSTARTED_WARNING_MSG "You've loaded a profile which had already started playing Underground Mode.\nWhile you can play Nuzlocke from this point on, it is highly recommended that you start a new game!"
 #define NUZLOCKE_CARLIFE_MSG "You've lost all lives on your current car and must select a different one.\nYou cannot leave this screen until you select a car.\n\nThis message will only be shown once."
+// intro stuff
+#define NUZLOCKE_INTRO_MSG "Welcome to the Nuzlocke Challenge!\nPlay through the game as fast as possible while racking up the most cash and style points!"
+// rules
+#define NUZLOCKE_INTRO_RULES_TREEHEAD "Rules"
+#define NUZLOCKE_INTRO_RULES_BP1 "Each car has a certain amount of lives."
+#define NUZLOCKE_INTRO_RULES_BP2 "Losing a race event in any way is considered a loss of life, this includes: losing a race, quitting prematurely and/or restarting a race"
+#define NUZLOCKE_INTRO_RULES_BP3 "On the last life of a car you are not allowed to restart the race"
+#define NUZLOCKE_INTRO_RULES_BP4 "If you lose all cars = game over"
+#define NUZLOCKE_INTRO_RULES_BP5 "If you can't afford any car trade = game over"
+#define NUZLOCKE_INTRO_RULES_BP6 "Depending on the game difficulty, you may not be allowed to access the car trade menu and/or select the difficulty of a race"
+#define NUZLOCKE_INTRO_RULES_NOTE "The challenge starts as soon as you enter Underground Mode."
+// additional notes
+#define NUZLOCKE_INTRO_ADDNOTE_TREEHEAD "Additional notes (please read at least once)"
+#define NUZLOCKE_INTRO_ADDNOTE_BP1 "Keep in mind that this game addon currently does NOT save your progress and restarts every time you load or make a new profile. It is highly recommended you start from a new game every time!"
+#define NUZLOCKE_INTRO_ADDNOTE_BP2 "You can open the stats window anytime by pressing the PAGE DOWN key on the keyboard, here you can track all stats tracked by this addon (when it's in focus it locks the game input, be careful)"
+#define NUZLOCKE_INTRO_ADDNOTE_BP3 "In the difficulty selection screen, you can enable an option to replace the traffic AI with racer's AI independent of the difficulty you select."
+#define NUZLOCKE_INTRO_ADDNOTE_BP4 "This addon replaces the game's mouse cursor and uses the one from the OS instead (due to technical reasons)"
+#define NUZLOCKE_INTRO_ADDNOTE_BP5 "And lastly (if you hadn't noticed yet) you should be able to fully control this UI with a controller."
+#define NUZLOCKE_INTRO_ADDNOTE_BP6 "Thanks for playing!"
 
 #define NUZLOCKE_REASON_NOCARS "Reason: No cars available"
 #define NUZLOCKE_REASON_COMPLETE "Reason: Game complete!"

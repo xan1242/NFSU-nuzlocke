@@ -16,6 +16,8 @@ Play through the game as fast as possible while racking up the most cash and sty
 
 - If you can't afford any car trade = game over
 
+- Depending on the game difficulty, you may not be allowed to access the car trade menu and/or select the difficulty of a race
+
 The challenge starts as soon as you enter Underground Mode.
 
 # Additional notes (please read at least once)
@@ -26,7 +28,9 @@ The challenge starts as soon as you enter Underground Mode.
 
 - In the difficulty selection screen, you can enable an option to replace the traffic AI with racer's AI independent of the difficulty you select.
 
-- And lastly (if you hadn't noticed yet) you should be able to control this UI fully with a controller.
+- This addon replaces the game's mouse cursor and uses the one from the OS instead (due to technical reasons)
+
+- And lastly (if you hadn't noticed yet) you should be able to fully control this UI with a controller.
 
 - Thanks for playing!
 

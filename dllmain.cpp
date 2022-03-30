@@ -1601,12 +1601,43 @@ void ShowStatsWindow()
 
 void ShowIntroMessage()
 {
-	ImGui::SetNextWindowSize(ImVec2(800.0, 0.0));
+	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+	ImGui::SetNextWindowSize(ImVec2(800.0f, 0.0f));
+
+	if (main_viewport->Size.y <= 1000.0f)
+		ImGui::SetNextWindowPos(ImVec2((main_viewport->Size.x / 2) - 400.0f, 0.0f)); // put the dialog at center-top of the screen (if the screen is small in height -- TODO: implement screen scaling)
+
 	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_INTRO, &bShowIntroMessage, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::PushTextWrapPos();
-		ImGui::Text("Nuzlocke intro text goes here");
+		ImGui::TextUnformatted(NUZLOCKE_INTRO_MSG);
 		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		if (ImGui::TreeNode(NUZLOCKE_INTRO_RULES_TREEHEAD))
+		{
+			ImGui::PushTextWrapPos();
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_RULES_BP1);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_RULES_BP2);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_RULES_BP3);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_RULES_BP4);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_RULES_BP5);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_RULES_BP6);
+			ImGui::PopTextWrapPos();
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode(NUZLOCKE_INTRO_ADDNOTE_TREEHEAD))
+		{
+			ImGui::PushTextWrapPos();
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP1);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP2);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP3);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP4);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP5);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP6);
+			ImGui::PopTextWrapPos();
+			ImGui::TreePop();
+		}
 		ImGui::Separator();
 		if (ImGui::Checkbox("Don't show again", &bSkipIntroMessage))
 			UpdateIniFile();
@@ -1660,8 +1691,8 @@ void ShowGameOverScreen()
 {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
 	
-	ImGui::SetNextWindowSize(ImVec2(800.0, 0.0));
-	ImGui::SetNextWindowPos(ImVec2((main_viewport->Size.x / 2) - 400, 0)); // put the dialog at center-top of the screen because car stats are giant and gamepad controls don't really allow for easy window moving
+	ImGui::SetNextWindowSize(ImVec2(800.0f, 0.0f));
+	ImGui::SetNextWindowPos(ImVec2((main_viewport->Size.x / 2.0f) - 400.0f, 0.0f)); // put the dialog at center-top of the screen because car stats are giant and gamepad controls don't really allow for easy window moving
 	
 	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_GAMEOVER, &bShowGameOverScreen, ImGuiWindowFlags_AlwaysAutoResize))
 	{
