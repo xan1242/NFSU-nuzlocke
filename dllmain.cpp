@@ -346,6 +346,16 @@ unsigned int __stdcall FEngFindObject(const char* pkg, int hash)
 	return result;
 }
 
+int FEngFindString(const char* pkgname, int objhash)
+{
+	int result; // r3
+
+	result = FEngFindObject((char*)FEPkgMgr_FindPackage(pkgname), objhash);
+	if (!result || *(unsigned int*)(result + 24) != 2)
+		result = 0;
+	return result;
+}
+
 void __stdcall FEngSetButtonState(const char* pkgname, unsigned int hash, unsigned int state)
 {
 	int cfeng_instance = *(int*)CFENG_PINSTANCE_ADDR;
