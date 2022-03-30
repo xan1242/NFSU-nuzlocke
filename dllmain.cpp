@@ -5,6 +5,7 @@
 // TODO: add a points system of some sort -- done?? using style points for now... but I think we should track the acculumated points during the runtime of Nuzlocke
 // TODO: add an "extra life" system maybe
 // TODO: session saving maybe?
+// TODO: restore entry requirement checks for events on forced difficulty settings
 
 #include "NFSU_nuzlocke.h"
 #include <windows.h>
