@@ -169,6 +169,8 @@ struct NuzlockeStruct
 	unsigned int Wins;
 	unsigned int Losses;
 	unsigned int TimeSpentRacing;
+	unsigned int TimeOfDeathRT;
+	unsigned int TimeOfDeathPT;
 	bool bUnlocked;
 }*NuzCars, DDayCar;
 
@@ -685,6 +687,13 @@ bool __stdcall HasEventBeenWon_hook(unsigned int arg1, unsigned int arg2)
 
 			TotalLivesLost++;
 			TotalLosses++;
+
+			if ((*car).Lives <= 0)
+			{
+				// mark the time of death
+				(*car).TimeOfDeathRT = TotalTimeSpentRacing;
+				(*car).TimeOfDeathPT = TotalTimePlaying;
+			}
 		}
 
 		if (result)
@@ -1653,7 +1662,7 @@ void ShowStatsWindow()
 	ImGui::Separator();
 	if (ImGui::CollapsingHeader("Per-car stats##StatsWindow", ImGuiTreeNodeFlags_None))
 	{
-		if (ImGui::BeginTable("car_table_stats", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+		if (ImGui::BeginTable("car_table_stats", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
 		{
 			ImGui::TableSetupColumn("Car");
 			ImGui::TableSetupColumn("Lives");
@@ -1661,6 +1670,8 @@ void ShowStatsWindow()
 			ImGui::TableSetupColumn("Wins");
 			ImGui::TableSetupColumn("Losses");
 			ImGui::TableSetupColumn("Time");
+			ImGui::TableSetupColumn("Time of Death (RT)");
+			ImGui::TableSetupColumn("Time of Death (PT)");
 			ImGui::TableHeadersRow();
 
 			ImGui::TableNextRow();
@@ -1676,6 +1687,12 @@ void ShowStatsWindow()
 			ImGui::Text("%d", DDayCar.Losses);
 			ImGui::TableSetColumnIndex(5);
 			CalcMinSecHuns4(DDayCar.TimeSpentRacing, &mins, &sec, &hun);
+			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+			ImGui::TableSetColumnIndex(6);
+			CalcMinSecHuns4(DDayCar.TimeOfDeathRT, &mins, &sec, &hun);
+			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+			ImGui::TableSetColumnIndex(7);
+			CalcMinSecHuns(DDayCar.TimeOfDeathPT, &mins, &sec, &hun);
 			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
 
 			for (int i = 0; i < NumberOfCars; i++)
@@ -1695,6 +1712,12 @@ void ShowStatsWindow()
 					ImGui::Text("%d", NuzCars[i].Losses);
 					ImGui::TableSetColumnIndex(5);
 					CalcMinSecHuns4(NuzCars[i].TimeSpentRacing, &mins, &sec, &hun);
+					ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+					ImGui::TableSetColumnIndex(6);
+					CalcMinSecHuns4(NuzCars[i].TimeOfDeathRT, &mins, &sec, &hun);
+					ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+					ImGui::TableSetColumnIndex(7);
+					CalcMinSecHuns(NuzCars[i].TimeOfDeathPT, &mins, &sec, &hun);
 					ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
 				}
 			}
@@ -1844,7 +1867,7 @@ void ShowGameOverScreen()
 		ImGui::Separator();
 		if (ImGui::CollapsingHeader("Per-car stats##GameOverWindow", ImGuiTreeNodeFlags_None))
 		{
-			if (ImGui::BeginTable("car_table_gameover", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+			if (ImGui::BeginTable("car_table_gameover", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
 			{
 				ImGui::TableSetupColumn("Car");
 				ImGui::TableSetupColumn("Lives");
@@ -1852,6 +1875,8 @@ void ShowGameOverScreen()
 				ImGui::TableSetupColumn("Wins");
 				ImGui::TableSetupColumn("Losses");
 				ImGui::TableSetupColumn("Time");
+				ImGui::TableSetupColumn("Time of Death (RT)");
+				ImGui::TableSetupColumn("Time of Death (PT)");
 				ImGui::TableHeadersRow();
 
 				ImGui::TableNextRow();
@@ -1867,6 +1892,12 @@ void ShowGameOverScreen()
 				ImGui::Text("%d", DDayCar.Losses);
 				ImGui::TableSetColumnIndex(5);
 				CalcMinSecHuns4(DDayCar.TimeSpentRacing, &mins, &sec, &hun);
+				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+				ImGui::TableSetColumnIndex(6);
+				CalcMinSecHuns4(DDayCar.TimeOfDeathRT, &mins, &sec, &hun);
+				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+				ImGui::TableSetColumnIndex(7);
+				CalcMinSecHuns(DDayCar.TimeOfDeathPT, &mins, &sec, &hun);
 				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
 
 				for (int i = 0; i < NumberOfCars; i++)
@@ -1886,6 +1917,12 @@ void ShowGameOverScreen()
 						ImGui::Text("%d", NuzCars[i].Losses);
 						ImGui::TableSetColumnIndex(5);
 						CalcMinSecHuns4(NuzCars[i].TimeSpentRacing, &mins, &sec, &hun);
+						ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+						ImGui::TableSetColumnIndex(6);
+						CalcMinSecHuns4(NuzCars[i].TimeOfDeathRT, &mins, &sec, &hun);
+						ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+						ImGui::TableSetColumnIndex(7);
+						CalcMinSecHuns(NuzCars[i].TimeOfDeathPT, &mins, &sec, &hun);
 						ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
 					}
 				}
