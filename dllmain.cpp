@@ -141,6 +141,7 @@ bool bShowingRaceOver = false;
 bool bMarkedStatusAlready = false;
 
 unsigned int UnlockedCarCount = 0; // we MUST keep track of this -- if the player has 1 car unlocked, trade menu CANNOT open
+unsigned int GameUnlockedCarCount = 0; // unlocked cars by the game progression itself
 
 // some extra stats
 unsigned int TotalLivesLost = 0;
@@ -148,6 +149,7 @@ unsigned int TotalLosses = 0;
 unsigned int TotalWins = 0;
 unsigned int TotalTimeSpentRacing = 0;
 unsigned int TotalTimePlaying = 0;
+unsigned int TotalEventsPlayed = 0;
 
 enum CarUsageType
 {
@@ -467,6 +469,7 @@ void UpdateCarUnlockStatus()
 {
 	CareerCarHash = *(int*)CAREER_CAR_TYPE_HASH_POINTER;
 	unsigned int carcount = 0;
+	unsigned int gamecarcount = 0;
 	
 	for (int i = 0; i < NumberOfCars; i++)
 	{
@@ -477,8 +480,11 @@ void UpdateCarUnlockStatus()
 
 		if (NuzCars[i].bUnlocked && NuzCars[i].Lives && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
 			carcount++;
+		if (NuzCars[i].bUnlocked && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
+			gamecarcount++;
 	}
 	UnlockedCarCount = carcount;
+	GameUnlockedCarCount = gamecarcount;
 }
 
 bool bCheckIfAllCarsLocked()
@@ -639,6 +645,7 @@ bool __stdcall HasEventBeenWon_hook(unsigned int arg1, unsigned int arg2)
 			(*car).Wins++;
 			TotalWins++;
 		}
+		TotalEventsPlayed++;
 	}
 	return result;
 }
@@ -666,6 +673,7 @@ bool __stdcall NotifyRestart_hook(unsigned int arg1, unsigned int arg2)
 		TotalLosses++;
 
 		bMarkedStatusAlready = false;
+		TotalEventsPlayed++;
 	}
 
 	bRaceFinished = false;
@@ -699,6 +707,7 @@ void __stdcall PauseMenu_DoQuitRace_Hook(int unk)
 		TotalLivesLost++;
 		TotalLosses++;
 		bMarkedStatusAlready = false;
+		TotalEventsPlayed++;
 	}
 
 	bRaceFinished = false;
@@ -726,6 +735,7 @@ bool __stdcall PostRace_DoQuitRace_hook(unsigned int arg1, unsigned int arg2)
 
 		TotalLivesLost++;
 		TotalLosses++;
+		TotalEventsPlayed++;
 	}
 
 	if (GameMode == 1 && bMarkedStatusAlready)
@@ -1272,7 +1282,7 @@ void DrawFEHUD()
 	else
 		car = &DDayCar;
 	char disp_string[64];
-	sprintf(disp_string, "Car: %s // Lives: %d\nCars Available: %d", (*car).CarName, (*car).Lives, UnlockedCarCount);
+	sprintf(disp_string, "Car: %s // Lives: %d\nCars Available: %d/%d", (*car).CarName, (*car).Lives, UnlockedCarCount, GameUnlockedCarCount);
 
 	float text_width = ImGui::CalcTextSize(disp_string).x + 8 ;
 	float text_height = ImGui::GetTextLineHeightWithSpacing() + 4;
@@ -1349,7 +1359,7 @@ void DrawIGHUD()
 	int sec = 0;
 	int hun = 0;
 	// this is solely used for precalculating the size, not for actual display
-	sprintf(hud_disp_string, "Lives: %d\nCars: %d\nRacing: %03d:%02d.%02d\nTotal: %04d:%02d.%02d", (*car).Lives, UnlockedCarCount, 888, 88, 88, 8888, 88, 88);
+	sprintf(hud_disp_string, "Lives: %d\nCars: %d/%d\nRacing: %03d:%02d.%02d\nTotal: %04d:%02d.%02d", (*car).Lives, UnlockedCarCount, GameUnlockedCarCount, 888, 88, 88, 8888, 88, 88);
 
 	float text_width = ImGui::CalcTextSize(hud_disp_string).x + 22 ;
 	float text_height = (ImGui::GetTextLineHeightWithSpacing() + 2) * 4;
@@ -1444,6 +1454,23 @@ void DrawIGHUD()
 	
 	ImGui::Text("%d", UnlockedCarCount);
 	ImGui::PopFont();
+	// align non-lcd font
+	ImGui::SameLine(0, 0);
+	curpos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(curpos.x + 6, curpos.y + lcd_font_align + 2));
+	// set darker color
+	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0.501, 0.752, 1.0));
+	ImGui::TextUnformatted("/");
+	ImGui::PopStyleColor();
+	// lcd font again
+	ImGui::SameLine(0, 0);
+	ImGui::PushFont(lcd_font);
+	// align lcd font
+	curpos = ImGui::GetCursorPos();
+	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align - 2));
+
+	ImGui::Text("%d", GameUnlockedCarCount);
+	ImGui::PopFont();
 
 	// RACE TIME
 	// align non-lcd font for newline
@@ -1530,7 +1557,7 @@ void ShowStatsWindow()
 	else
 		ImGui::Text("Car: %s\nLives: %d", DDayCar.CarName, DDayCar.Lives);
 	ImGui::Separator();
-	ImGui::Text("Cars available: %d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, Money, StylePoints);
+	ImGui::Text("Cars available: %d/%d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nEvents played: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, GameUnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, TotalEventsPlayed, Money, StylePoints);
 	int mins = 0;
 	int sec = 0;
 	int hun = 0;
@@ -1733,7 +1760,7 @@ void ShowGameOverScreen()
 		}
 		
 		ImGui::Separator();
-		ImGui::Text("Cars available: %d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, Money, StylePoints);
+		ImGui::Text("Cars available: %d/%d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nEvents played: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, GameUnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, TotalEventsPlayed, Money, StylePoints);
 		int mins = 0;
 		int sec = 0;
 		int hun = 0;
