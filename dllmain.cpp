@@ -5,7 +5,6 @@
 // TODO: add a points system of some sort -- done?? using style points for now... but I think we should track the acculumated points during the runtime of Nuzlocke
 // TODO: add an "extra life" system maybe
 // TODO: session saving maybe?
-// TODO: restore entry requirement checks for events on forced difficulty settings
 
 #include "NFSU_nuzlocke.h"
 #include <windows.h>
@@ -127,7 +126,6 @@ unsigned int OldGameMode = 0;
 unsigned int LastCarTime = 0;
 unsigned int LastTotalTime = 0;
 unsigned int LastTotalPlayTime = 0;
-unsigned int CaughtFERaceEventObj = 0;
 
 unsigned int GameMode = 0; // 1 = career mode, others are quickrace or online modes
 unsigned int RaceType = 0; // quick race - race type, currently unused
@@ -668,8 +666,6 @@ bool __stdcall HasEventBeenWon_hook(unsigned int arg1, unsigned int arg2)
 {
 	bool result = HasEventBeenWon(arg1, arg2);
 	NuzlockeStruct* car;
-
-	CaughtFERaceEventObj = arg1;
 
 	if (bProfileStartedCareer)
 	{
