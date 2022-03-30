@@ -946,21 +946,21 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 {
 	unsigned int thethis = 0;
 	_asm mov thethis, ecx
-	unsigned int DifficultyHash[3] = {0};
+	unsigned int DifficultyHash[5] = {0};
 
 	if ((GameMode == 1) && !bGameIsOver && LockedGameDifficulty)
 	{
 		switch (LockedGameDifficulty)
 		{
 		case 3:
-			DifficultyHash[2] = 0x16821E;
+			DifficultyHash[4] = 0x16821E;
 			break;
 		case 2:
-			DifficultyHash[2] = 0x6BAA2200;
+			DifficultyHash[4] = 0x6BAA2200;
 			break;
 		case 1:
 		default:
-			DifficultyHash[2] = 0x14DD31;
+			DifficultyHash[4] = 0x14DD31;
 			break;
 		}
 		return UndergroundBriefScreen_LaunchCurrentEvent((void*)DifficultyHash, (void*)thethis);
