@@ -83,6 +83,7 @@ int TimeSinceLastMouseMovement = 0;
 // Game-related addresses
 #define CAREER_CAR_TYPE_HASH_POINTER 0x75EF00
 #define FECAREERMANAGER_POINTER 0x75EEF8
+#define THEGARAGEMANAGER_ADDR 0x00758AD4
 #define CARTYPEINFOARRAY_ADDRESS 0x00734588
 #define GAMEFLOWMANAGER_STATUS_ADDR 0x0077A920
 #define GAMEFLOWMANAGER_OBJ_ADDR 0x0077B240
@@ -120,6 +121,7 @@ const char GameDifficultyNames[4][16] = { NUZLOCKE_UI_GAME_DIFF_UNLOCKED, NUZLOC
 unsigned int CareerCarHash = 0; // currently selected car in career mode (not initialized until DDay is completed)
 unsigned int GameFlowStatus = 0;
 unsigned int Money = 0;
+unsigned int StylePoints = 0;
 unsigned int TimeSinceModeSwitch = 0;
 unsigned int TimeBaseSinceModeSwitch = 0;
 unsigned int OldGameMode = 0;
@@ -171,7 +173,7 @@ struct NuzlockeStruct
 }*NuzCars, DDayCar;
 
 // DDay car name
-char* DDayCarName = "Intro/D-Day Car";
+char* DDayCarName = "D-Day";
 
 struct CarTypeInfo
 {
@@ -1488,42 +1490,24 @@ void DrawIGHUD()
 
 void __stdcall ShowDebugWindow()
 {
-	unsigned int ci = FindCarIndexByHash(CareerCarHash);
-	
-	ImGui::Begin("NUZLOCKE DEBUG");
-	ImGui::Text("Mouse X: %d Mouse Y: %d", *(int*)0x0070649C, *(int*)0x007064A0);
+	NuzlockeStruct* car;
 
 	if (bProfileStartedCareer)
-		ImGui::Text("Lives: %d\nCar: %s\nWins: %d\nLosses: %d\nUnlocked: %d", NuzCars[ci].Lives, NuzCars[ci].CarName, NuzCars[ci].Wins, NuzCars[ci].Losses, NuzCars[ci].bUnlocked);
+	{
+		unsigned int ci = FindCarIndexByHash(CareerCarHash);
+		car = &NuzCars[ci];
+	}
 	else
-		ImGui::Text("Lives: %d\nCar: %s\n", DDayCar.Lives, DDayCar.CarName);
-
+		car = &DDayCar;
+	
+	ImGui::Begin("NUZLOCKE DEBUG");
+	ImGui::Text("Mouse X: %d Mouse Y: %d", *(int*)FEMOUSECURSOR_X_ADDR, *(int*)FEMOUSECURSOR_Y_ADDR);
 
 	ImGui::Separator();
 	if (ImGui::Button("Lose life"))
-	{
-		NuzCars[ci].Lives = NuzCars[ci].Lives - 1;
-	}
+		(*car).Lives++;
 	if (ImGui::Button("Add life"))
-	{
-		NuzCars[ci].Lives = NuzCars[ci].Lives + 1;
-	}
-
-	ImGui::Text("Cars available: %d", UnlockedCarCount);
-	ImGui::Text("Total wins: %d", TotalWins);
-	ImGui::Text("Total losses: %d", TotalLosses);
-	ImGui::Text("Total lives lost: %d", TotalLivesLost);
-
-	if (bGameIsOver && bGameStarted)
-	{
-		ImGui::Text("Game over!");
-		if (bCantAffordAnyCar)
-			ImGui::Text(NUZLOCKE_REASON_FINANCIAL);
-		if (bAllCarsLost)
-			ImGui::Text(NUZLOCKE_REASON_NOCARS);
-		if (bGameComplete)
-			ImGui::Text(NUZLOCKE_REASON_COMPLETE);
-	}
+		(*car).Lives--;
 
 	ImGui::End();
 }
@@ -1538,10 +1522,9 @@ void ShowStatsWindow()
 	if (bProfileStartedCareer)
 		ImGui::Text("Car: %s\nLives: %d\nWins: %d\nLosses: %d\n", NuzCars[ci].CarName, NuzCars[ci].Lives, NuzCars[ci].Wins, NuzCars[ci].Losses);
 	else
-		ImGui::Text("Lives: %d\nCar: %s", DDayCar.Lives, DDayCar.CarName);
+		ImGui::Text("Car: %s\nLives: %d", DDayCar.CarName, DDayCar.Lives);
 	ImGui::Separator();
-	ImGui::Text("Cars available: %d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d", UnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost);
-
+	ImGui::Text("Cars available: %d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, Money, StylePoints);
 	int mins = 0;
 	int sec = 0;
 	int hun = 0;
@@ -1562,9 +1545,9 @@ void ShowStatsWindow()
 			ImGui::Text(NUZLOCKE_REASON_COMPLETE);
 	}
 	ImGui::Separator();
-	if (ImGui::CollapsingHeader("Per-car stats", ImGuiTreeNodeFlags_None))
+	if (ImGui::CollapsingHeader("Per-car stats##StatsWindow", ImGuiTreeNodeFlags_None))
 	{
-		if (ImGui::BeginTable("car_table", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+		if (ImGui::BeginTable("car_table_stats", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
 		{
 			ImGui::TableSetupColumn("Car");
 			ImGui::TableSetupColumn("Lives");
@@ -1573,6 +1556,22 @@ void ShowStatsWindow()
 			ImGui::TableSetupColumn("Losses");
 			ImGui::TableSetupColumn("Time");
 			ImGui::TableHeadersRow();
+
+			ImGui::TableNextRow();
+			ImGui::TableSetColumnIndex(0);
+			ImGui::TextUnformatted(DDayCar.CarName);
+			ImGui::TableSetColumnIndex(1);
+			ImGui::Text("%d", DDayCar.Lives);
+			ImGui::TableSetColumnIndex(2);
+			ImGui::Text("%d", DDayCar.bUnlocked);
+			ImGui::TableSetColumnIndex(3);
+			ImGui::Text("%d", DDayCar.Wins);
+			ImGui::TableSetColumnIndex(4);
+			ImGui::Text("%d", DDayCar.Losses);
+			ImGui::TableSetColumnIndex(5);
+			CalcMinSecHuns4(DDayCar.TimeSpentRacing, &mins, &sec, &hun);
+			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+
 			for (int i = 0; i < NumberOfCars; i++)
 			{
 				if (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING)
@@ -1689,9 +1688,7 @@ void ShowGameOverScreen()
 		}
 		
 		ImGui::Separator();
-		ImGui::Text("Total wins: %d", TotalWins);
-		ImGui::Text("Total losses: %d", TotalLosses);
-		ImGui::Text("Total lives lost: %d", TotalLivesLost);
+		ImGui::Text("Cars available: %d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, Money, StylePoints);
 		int mins = 0;
 		int sec = 0;
 		int hun = 0;
@@ -1700,9 +1697,9 @@ void ShowGameOverScreen()
 		CalcMinSecHuns(TotalTimePlaying, &mins, &sec, &hun);
 		ImGui::Text("Total play time: %2d:%02d.%02d", mins, sec, hun);
 		ImGui::Separator();
-		if (ImGui::CollapsingHeader("Per-car stats", ImGuiTreeNodeFlags_None))
+		if (ImGui::CollapsingHeader("Per-car stats##GameOverWindow", ImGuiTreeNodeFlags_None))
 		{
-			if (ImGui::BeginTable("car_table", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
+			if (ImGui::BeginTable("car_table_gameover", 6, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
 			{
 				ImGui::TableSetupColumn("Car");
 				ImGui::TableSetupColumn("Lives");
@@ -1711,6 +1708,22 @@ void ShowGameOverScreen()
 				ImGui::TableSetupColumn("Losses");
 				ImGui::TableSetupColumn("Time");
 				ImGui::TableHeadersRow();
+
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0);
+				ImGui::TextUnformatted(DDayCar.CarName);
+				ImGui::TableSetColumnIndex(1);
+				ImGui::Text("%d", DDayCar.Lives);
+				ImGui::TableSetColumnIndex(2);
+				ImGui::Text("%d", DDayCar.bUnlocked);
+				ImGui::TableSetColumnIndex(3);
+				ImGui::Text("%d", DDayCar.Wins);
+				ImGui::TableSetColumnIndex(4);
+				ImGui::Text("%d", DDayCar.Losses);
+				ImGui::TableSetColumnIndex(5);
+				CalcMinSecHuns4(DDayCar.TimeSpentRacing, &mins, &sec, &hun);
+				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+
 				for (int i = 0; i < NumberOfCars; i++)
 				{
 					if (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING)
@@ -2123,6 +2136,7 @@ void __stdcall MainLoopHook()
 	GameMode = *(int*)GAMEMODE_ADDR;
 	RaceType = *(int*)RACETYPE_ADDR;
 	Money = *(int*)PLAYERMONEY_ADDR;
+	StylePoints = *(int*)THEGARAGEMANAGER_ADDR;
 
 	if (!bBlockedGameInput)
 		UpdateFECursorPos();
