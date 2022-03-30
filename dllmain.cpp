@@ -2453,6 +2453,9 @@ int Init()
 	// disable PC_CURSOR texture to avoid duplicate cursors
 	injector::WriteMemory<unsigned int>(0x004F30A1, 0, true);
 
+	// read config
+	ReadIniFile();
+
 	// misc stuff, unrelated to the main functions of this mod but harmless
 	if (bIncreaseMiniworldSegments)
 	{
@@ -2460,9 +2463,6 @@ int Init()
 		*(int*)MINIWORLD_NUMVISIBLESEGMENTS_REF_ADDR = 5;
 		*(int*)MINIWORLD_NUMVISIBLESEGMENTS_ENV_ADDR = 5;
 	}
-
-	// read config
-	ReadIniFile();
 
 	return 0;
 }
