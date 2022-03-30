@@ -1282,9 +1282,13 @@ void DrawFEHUD()
 
 	// make a non-interactive window for status display in FE
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration
-									| ImGuiWindowFlags_NoMove 
+									| ImGuiWindowFlags_NoMove
 									| ImGuiWindowFlags_NoBringToFrontOnFocus
-									| ImGuiWindowFlags_NoInputs;
+									| ImGuiWindowFlags_NoInputs
+									| ImGuiWindowFlags_NoFocusOnAppearing
+									| ImGuiWindowFlags_NoCollapse
+									| ImGuiWindowFlags_NoScrollWithMouse
+									| ImGuiWindowFlags_NoScrollbar;
 
 	
 
@@ -1360,7 +1364,11 @@ void DrawIGHUD()
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration
 		| ImGuiWindowFlags_NoMove
 		| ImGuiWindowFlags_NoBringToFrontOnFocus
-		| ImGuiWindowFlags_NoInputs;
+		| ImGuiWindowFlags_NoInputs
+		| ImGuiWindowFlags_NoFocusOnAppearing
+		| ImGuiWindowFlags_NoCollapse
+		| ImGuiWindowFlags_NoScrollWithMouse
+		| ImGuiWindowFlags_NoScrollbar;
 
 
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
