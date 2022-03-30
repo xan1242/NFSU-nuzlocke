@@ -1648,10 +1648,18 @@ void ShowIntroMessage()
 			bShowIntroMessage = false;
 		ImGui::EndPopup();
 	}
-	if (!bShowIntroMessage && bProfileStartedCareer && !bSkipAlreadyStartedWarning)
+	if (!bShowIntroMessage && bProfileStartedCareer)
 	{
-		ImGui::OpenPopup(NUZLOCKE_HEADER_PROFILEWARNING);
-		bShowAlreadyStartedWarning = true;
+		if (!bSkipAlreadyStartedWarning)
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_PROFILEWARNING);
+			bShowAlreadyStartedWarning = true;
+		}
+		else
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+			bShowDifficultySelector = true;
+		}
 	}
 	if (!bShowIntroMessage && !bProfileStartedCareer)
 	{
