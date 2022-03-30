@@ -105,7 +105,7 @@ unsigned int NumberOfCars = 35; // this is a fixed value in the executable, chan
 unsigned int NuzlockeDifficulty = 0; // 0 = easy, 1 = medium, 2 = hard/nuzlocke, 3 = ultra hard/ultra nuzlocke, 4 = custom
 unsigned int NumberOfLives = 1; // starting number of lives
 bool bAllowTradingCarMidGame = false; // option to allow/disallow car changing mid-game
-unsigned int LockedGameDifficulty = 0; // 0 = unlocked, 1 = easy, 2 = medium, 3 = hard
+unsigned int LockedGameDifficulty = 0; // 0 = unlocked, 1 = medium, 2 = hard
 // VARIABLE FOR FUN - force traffic cars into race paths (independent of difficulty)
 bool bTrafficRacers = false;
 
@@ -115,7 +115,7 @@ bool bCustomAllowTrading = false;
 
 const char CarTradingStatusNames[2][16] = { NUZLOCKE_UI_CARTRADING_DISALLOWED, NUZLOCKE_UI_CARTRADING_ALLOWED };
 const char NuzDifficultyNames[NUZLOCKED_NUZ_DIFF_COUNT][16] = { NUZLOCKE_UI_NUZ_DIFF_EASY, NUZLOCKE_UI_NUZ_DIFF_MEDIUM, NUZLOCKE_UI_NUZ_DIFF_HARD, NUZLOCKE_UI_NUZ_DIFF_ULTRAHARD , NUZLOCKE_UI_NUZ_DIFF_CUSTOM };
-const char GameDifficultyNames[4][16] = { NUZLOCKE_UI_GAME_DIFF_UNLOCKED, NUZLOCKE_UI_GAME_DIFF_EASY, NUZLOCKE_UI_GAME_DIFF_MEDIUM, NUZLOCKE_UI_GAME_DIFF_HARD};
+const char GameDifficultyNames[3][16] = { NUZLOCKE_UI_GAME_DIFF_EASY, NUZLOCKE_UI_GAME_DIFF_MEDIUM, NUZLOCKE_UI_GAME_DIFF_HARD};
 
 unsigned int CareerCarHash = 0; // currently selected car in career mode (not initialized until DDay is completed)
 unsigned int GameFlowStatus = 0;
@@ -127,6 +127,7 @@ unsigned int OldGameMode = 0;
 unsigned int LastCarTime = 0;
 unsigned int LastTotalTime = 0;
 unsigned int LastTotalPlayTime = 0;
+unsigned int CaughtFERaceEventObj = 0;
 
 unsigned int GameMode = 0; // 1 = career mode, others are quickrace or online modes
 unsigned int RaceType = 0; // quick race - race type, currently unused
@@ -206,6 +207,7 @@ void(__stdcall*BuildTradeableList)(int unk) = (void(__stdcall*)(int))0x004C3240;
 unsigned int(__stdcall*PostRaceMenuScreen_Setup)(unsigned int PostRaceMenuScreen, unsigned int PostRaceMenuSetupParams) = (unsigned int(__stdcall*)(unsigned int, unsigned int))0x004969E0;
 // FE stuff
 void(__thiscall* _FEngSetColor)(void* FEObject, unsigned int color) = (void(__thiscall*)(void*, unsigned int))0x004F75B0;
+unsigned int(*FEngGetCurrentButton)(char* pkgname) = (unsigned int(*)(char*))0x004F64D0;
 // UndergroundMenuScreen
 void(__thiscall* UndergroundMenuScreen_NotificationMessage)(void* UndergroundMenuScreen, unsigned int msg, void* FEObject, unsigned int unk2, unsigned int unk3) = (void(__thiscall*)(void*, unsigned int, void*, unsigned int, unsigned int))0x004EB1E0;
 // UndergroundTradeCarScreen
@@ -350,6 +352,42 @@ void __stdcall FEngSetButtonState(const char* pkgname, unsigned int hash, unsign
 	}
 }
 
+unsigned int FEngSetInvisible_Addr = 0x000495F70;
+void __stdcall FEngSetInvisible(const char* pkgname, unsigned int hash)
+{
+	_asm
+	{
+		mov edi, hash
+		mov esi, pkgname
+		call FEngSetInvisible_Addr
+	}
+}
+
+unsigned int FEngSetVisible_Addr = 0x00495FC0;
+void __stdcall FEngSetVisible(const char* pkgname, unsigned int hash)
+{
+	_asm
+	{
+		mov edi, hash
+		mov esi, pkgname
+		call FEngSetVisible_Addr
+	}
+}
+#pragma runtime_checks( "", off )
+unsigned int FEngSetCurrentButton_Addr = 0x004F5ED0;
+void __stdcall FEngSetCurrentButton(const char* pkgname, unsigned int button_hash)
+{
+	_asm
+	{
+		mov eax, ds:CFENG_PINSTANCE_ADDR
+		push eax
+		mov ecx, button_hash
+		mov eax, pkgname
+		call FEngSetCurrentButton_Addr
+	}
+}
+#pragma runtime_checks( "", restore )
+
 void __stdcall FEngSwitchPackages(char* src, char* dest)
 {
 	_asm
@@ -422,6 +460,16 @@ bool __stdcall IsCarUnlocked(unsigned int hash, unsigned int careermanager)
 		mov result_checker, al
 	}
 	return result_checker;
+}
+
+unsigned int UndergroundBriefScreen_Redraw_Addr = 0x004C5680;
+void __stdcall UndergroundBriefScreen_Redraw(void* UndergroundBriefScreen)
+{
+	_asm
+	{
+		mov eax, UndergroundBriefScreen
+		call UndergroundBriefScreen_Redraw_Addr
+	}
 }
 
 // super hacky way of handling this, because the game doesn't actually use a __thiscall for this, but by sheer luck it passes the object through the ECX register
@@ -621,6 +669,8 @@ bool __stdcall HasEventBeenWon_hook(unsigned int arg1, unsigned int arg2)
 	bool result = HasEventBeenWon(arg1, arg2);
 	NuzlockeStruct* car;
 
+	CaughtFERaceEventObj = arg1;
+
 	if (bProfileStartedCareer)
 	{
 		unsigned int ci = FindCarIndexByHash(CareerCarHash);
@@ -804,7 +854,6 @@ unsigned int __stdcall PostRaceMenuScreen_Setup_Hook(unsigned int PostRaceMenuSc
 			*(unsigned int*)PostRaceMenuSetupParams = 2;
 
 		result = PostRaceMenuScreen_Setup(PostRaceMenuScreen, PostRaceMenuSetupParams);
-
 		FE_SetButtonState_Str("Button3", pkgname, 0);
 		FE_SetButtonState_Str("Button4", pkgname, 0);
 		FE_SetButtonState_Str("Button_3", pkgname, 0);
@@ -957,30 +1006,57 @@ void __stdcall UndergroundBriefScreen_NotificationMessage_Hook(unsigned int msg,
 {
 	unsigned int thethis = 0;
 	_asm mov thethis, ecx
-	unsigned int DifficultyHash[5] = {0};
+	char* pkgname = *(char**)(thethis + 0xC);
 
 	if ((GameMode == 1) && !bGameIsOver && LockedGameDifficulty)
 	{
 		switch (LockedGameDifficulty)
 		{
-		case 3:
-			DifficultyHash[4] = 0x16821E;
-			break;
 		case 2:
-			DifficultyHash[4] = 0x6BAA2200;
+			FE_SetButtonState_Str("EASY", pkgname, 0);
+			FE_SetButtonState_Str("MEDIUM", pkgname, 0);
+			FE_SetColor_Str("EASY", pkgname, 0xFF404040);
+			FE_SetColor_Str("MEDIUM", pkgname, 0xFF404040);
 			break;
 		case 1:
+			FE_SetButtonState_Str("EASY", pkgname, 0);
+			FE_SetColor_Str("EASY", pkgname, 0xFF404040);
+			break;
+			break;
 		default:
-			DifficultyHash[4] = 0x14DD31;
 			break;
 		}
-		return UndergroundBriefScreen_LaunchCurrentEvent((void*)DifficultyHash, (void*)thethis);
 	}
 
 	return UndergroundBriefScreen_NotificationMessage((void*)thethis, msg, FEObject, unk2, unk3);
 }
 #pragma runtime_checks( "", restore )
+#pragma runtime_checks( "", off )
+void __stdcall FEngSetCurrentButton_Hook_BriefScreen(unsigned int cfeng)
+{
+	char* pkgname = 0;
+	_asm mov pkgname, eax
+	unsigned int in_button = 0;
+	_asm mov in_button, ecx
 
+	unsigned int DifficultyHash = 0;
+	switch (LockedGameDifficulty)
+	{
+	case 2:
+		if ((in_button == 0x6BAA2200) || (in_button == 0x14DD31))
+			in_button = 0x16821E;
+		break;
+	case 1:
+		if ((in_button == 0x14DD31))
+			in_button = 0x6BAA2200;
+		break;
+	default:
+		break;
+	}
+
+	FEngSetCurrentButton(pkgname, in_button);
+}
+#pragma runtime_checks( "", restore )
 // we must cave it in because we want to control it by a boolean variable easily
 // entrypoint: 0x044AAF3
 unsigned int TrafficRacersExit1True = 0x0044AA3F;
@@ -1862,7 +1938,7 @@ void ShowDifficultySelector()
 		bool bFocusedAlready = false;
 
 		ImGui::PushTextWrapPos();
-		ImGui::Text("Difficulty: %s\nNumber of lives: %d\nCar trading: %s\nGame difficulty lock: %s\n", NuzDifficultyNames[NuzlockeDifficulty], NumberOfLives, CarTradingStatusNames[bAllowTradingCarMidGame], GameDifficultyNames[LockedGameDifficulty]);
+		ImGui::Text("Difficulty: %s\nNumber of lives: %d\nCar trading: %s\nMinimum game difficulty: %s\n", NuzDifficultyNames[NuzlockeDifficulty], NumberOfLives, CarTradingStatusNames[bAllowTradingCarMidGame], GameDifficultyNames[LockedGameDifficulty]);
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
 		// EASY
@@ -1946,15 +2022,13 @@ void ShowDifficultySelector()
 			if (ImGui::Checkbox("Car trading", &bCustomAllowTrading))
 				bChangedSetting = true;
 
-			ImGui::TextUnformatted("Game difficulty lock:");
+			ImGui::TextUnformatted("Minimum game difficulty:");
 			
-			if (ImGui::RadioButton("Unlocked", (int*)&CustomLockedGameDifficulty, 0))
+			if (ImGui::RadioButton("Unlocked##Game", (int*)&CustomLockedGameDifficulty, 0))
 				bChangedSetting = true;
-			if (ImGui::RadioButton("Easy##Game", (int*)&CustomLockedGameDifficulty, 1))
+			if (ImGui::RadioButton("Medium##Game", (int*)&CustomLockedGameDifficulty, 1))
 				bChangedSetting = true;
-			if (ImGui::RadioButton("Medium##Game", (int*)&CustomLockedGameDifficulty, 2))
-				bChangedSetting = true;
-			if (ImGui::RadioButton("Hard##Game", (int*)&CustomLockedGameDifficulty, 3))
+			if (ImGui::RadioButton("Hard##Game", (int*)&CustomLockedGameDifficulty, 2))
 				bChangedSetting = true;
 
 			if (bChangedSetting)
@@ -2283,6 +2357,10 @@ int Init()
 
 	// UndergroundBrief vtable hook for forced game difficulty setting
 	injector::WriteMemory<unsigned int>(0x006C52E8, (unsigned int)&UndergroundBriefScreen_NotificationMessage_Hook, true);
+	// hooks to prevent the button from being selected by default
+	injector::MakeCALL(0x004C5CA7, FEngSetCurrentButton_Hook_BriefScreen, true);
+	injector::MakeCALL(0x004C5CBF, FEngSetCurrentButton_Hook_BriefScreen, true);
+	injector::MakeCALL(0x004C5CD7, FEngSetCurrentButton_Hook_BriefScreen, true);
 
 	// ChooseCareerCar cave
 	injector::MakeJMP(0x004E8A2F, ChooseCareerCar_Cave, true);
