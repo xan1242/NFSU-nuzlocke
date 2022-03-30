@@ -2042,12 +2042,15 @@ LRESULT WINAPI WndProcImgui(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void UpdateFECursorPos()
 {
+	bool bMouseInGameWindow = false;
 	POINT MousePos;
-	CURSORINFO curinfo = {0};
 	GetCursorPos(&MousePos);
 	GetWindowRect(*(HWND*)GAME_HWND_ADDR, &windowRect);
 
 	float ratio = 480.0 / (windowRect.bottom - windowRect.top); // scaling it to 480 height since that's what FE wants
+
+	if ((MousePos.x >= windowRect.left) || (MousePos.x <= windowRect.right) && (MousePos.y >= windowRect.top) || (MousePos.y <= windowRect.bottom))
+		bMouseInGameWindow = true;
 
 	MousePos.x = MousePos.x - windowRect.left;
 	MousePos.y = MousePos.y - windowRect.top;
@@ -2062,14 +2065,15 @@ void UpdateFECursorPos()
 		*(int*)FEMOUSECURSOR_CARORBIT_X_ADDR = MousePos.x - *(int*)FEMOUSECURSOR_X_ADDR;
 		*(int*)FEMOUSECURSOR_CARORBIT_Y_ADDR = MousePos.y - *(int*)FEMOUSECURSOR_Y_ADDR;
 	}
-	// get time since last movement and hide it after a while
+
+	if (!bMouseInGameWindow)
+		SetCursor(LoadCursor(NULL, IDC_ARROW));
+
+	// get time since last movement and hide it after a while (unless the cursor is within the game window so we don't hide it)
 	if ((MousePos.x != *(int*)FEMOUSECURSOR_X_ADDR) || (MousePos.y != *(int*)FEMOUSECURSOR_Y_ADDR))
 	{
 		TimeSinceLastMouseMovement = timeGetTime();
-		GetCursorInfo(&curinfo);
-		
-		if (curinfo.flags == 0)
-			SetCursor(LoadCursor(NULL, IDC_ARROW));
+		SetCursor(LoadCursor(NULL, IDC_ARROW));
 	}
 	else
 	{
