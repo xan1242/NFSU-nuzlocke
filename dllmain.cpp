@@ -748,6 +748,13 @@ bool __stdcall NotifyRestart_hook(unsigned int arg1, unsigned int arg2)
 
 		bMarkedStatusAlready = false;
 		TotalEventsPlayed++;
+
+		if ((*car).Lives <= 0)
+		{
+			// mark the time of death
+			(*car).TimeOfDeathRT = TotalTimeSpentRacing;
+			(*car).TimeOfDeathPT = TotalTimePlaying;
+		}
 	}
 
 	bRaceFinished = false;
@@ -782,6 +789,13 @@ void __stdcall PauseMenu_DoQuitRace_Hook(int unk)
 		TotalLosses++;
 		bMarkedStatusAlready = false;
 		TotalEventsPlayed++;
+
+		if ((*car).Lives <= 0)
+		{
+			// mark the time of death
+			(*car).TimeOfDeathRT = TotalTimeSpentRacing;
+			(*car).TimeOfDeathPT = TotalTimePlaying;
+		}
 	}
 
 	bRaceFinished = false;
@@ -810,6 +824,13 @@ bool __stdcall PostRace_DoQuitRace_hook(unsigned int arg1, unsigned int arg2)
 		TotalLivesLost++;
 		TotalLosses++;
 		TotalEventsPlayed++;
+
+		if ((*car).Lives <= 0)
+		{
+			// mark the time of death
+			(*car).TimeOfDeathRT = TotalTimeSpentRacing;
+			(*car).TimeOfDeathPT = TotalTimePlaying;
+		}
 	}
 
 	if (GameMode == 1 && bMarkedStatusAlready)
