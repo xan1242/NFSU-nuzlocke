@@ -2008,7 +2008,7 @@ void ShowDifficultySelector()
 		ImGui::PopTextWrapPos();
 		ImGui::Separator();
 		// EASY
-		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_EASY))
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_EASY, ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 		{
 			bShowDifficultySelector = false;
 		}
@@ -2021,7 +2021,7 @@ void ShowDifficultySelector()
 			bFocusedAlready = true;
 		}
 		// MEDIUM
-		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_MEDIUM))
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_MEDIUM, ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 		{
 			bShowDifficultySelector = false;
 		}
@@ -2035,7 +2035,7 @@ void ShowDifficultySelector()
 		}
 
 		// HARD
-		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_HARD))
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_HARD, ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 		{
 			bShowDifficultySelector = false;
 		}
@@ -2049,7 +2049,7 @@ void ShowDifficultySelector()
 		}
 
 		// ULTRA HARD
-		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_ULTRAHARD))
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_ULTRAHARD, ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 		{
 			bShowDifficultySelector = false;
 		}
@@ -2063,7 +2063,7 @@ void ShowDifficultySelector()
 		}
 
 		// CUSTOM
-		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_CUSTOM))
+		if (ImGui::Button(NUZLOCKE_UI_NUZ_DIFF_CUSTOM, ImVec2(ImGui::GetContentRegionAvail().x, 0)))
 		{
 			bShowDifficultySelector = false;
 		}
@@ -2075,7 +2075,7 @@ void ShowDifficultySelector()
 		ImGui::Separator();
 		ImGui::Checkbox("Use racer AI for traffic", &bTrafficRacers);
 		ImGui::Separator();
-		if (ImGui::CollapsingHeader("Custom settings", ImGuiTreeNodeFlags_None))
+		if (ImGui::CollapsingHeader("Custom difficulty settings", ImGuiTreeNodeFlags_None))
 		{
 			bool bChangedSetting = false;
 
