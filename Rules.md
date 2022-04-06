@@ -1,6 +1,6 @@
 Welcome to the Nuzlocke Challenge!
 
-Play through the game as fast as possible while racking up the most cash and style points!
+Play through the game as fast as possible with a limited number of lives!
 
 # Rules
 
@@ -16,13 +16,13 @@ Play through the game as fast as possible while racking up the most cash and sty
 
 - If you can't afford any car trade = game over
 
-- Depending on the game difficulty, you may not be allowed to access the car trade menu and/or select the difficulty of a race
+- Depending on the selected difficulty, you may not be allowed to access the car trade menu and/or select the difficulty of a race
 
 The challenge starts as soon as you enter Underground Mode.
 
 # Additional notes (please read at least once)
 
-- Keep in mind that this game addon currently does NOT save your progress and restarts every time you load or make a new profile. It is highly recommended you start from a new game every time!
+- This addon restarts every time you load or make a new profile. It is highly recommended you start from a new game every time (and play from start to finish if you can)!
 
 - You can open the stats window anytime by pressing the PAGE DOWN key on the keyboard, here you can track all stats tracked by this addon (when it's in focus it locks the game input, be careful)
 
@@ -30,8 +30,8 @@ The challenge starts as soon as you enter Underground Mode.
 
 - This addon replaces the game's mouse cursor and uses the one from the OS instead (due to technical reasons)
 
+- The game is automatically saved any time you exit, restart or finish a race (and whenever the game does it by itself normally). Save files can be located in the 'NuzlockeSaves' directory next to the game executable. You can only have 1 saved Nuzlocke session per profile.
+
 - And lastly (if you hadn't noticed yet) you should be able to fully control this UI with a controller.
 
 - Thanks for playing!
-
-
