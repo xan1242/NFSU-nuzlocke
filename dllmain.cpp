@@ -1,10 +1,8 @@
 ﻿// NFS Underground - Nuzlocke Challenge
 // by Xan/Tenjoin
 
-// TODO: add session saving - this game is prone to crashing regardless of this mod
 // TODO: add a points system of some sort -- done?? using style points for now... but I think we should track the acculumated points during the runtime of Nuzlocke
 // TODO: add an "extra life" system maybe
-// TODO: session saving maybe?
 
 #include "NFSU_nuzlocke.h"
 #include <windows.h>
@@ -39,6 +37,7 @@ bool bShowStatsWindow = false;
 bool bShowGameOverScreen = false;
 bool bShowCarLifeHint = false;
 bool bShowDifficultySelector = false;
+bool bShowLoadMessage = false;
 
 // Show-once bools
 bool bShownGameOverOnce = false;
@@ -89,6 +88,7 @@ int TimeSinceLastMouseMovement = 0;
 #define GAMEMODE_ADDR 0x00777B4C
 #define RACETYPE_ADDR 0x00777CC8
 #define FEDATABASE_ADDR 0x00748F70
+#define PLAYERNAME_ADDR 0x007588C4
 #define CFENG_PINSTANCE_ADDR 0x0073578C
 #define PLAYERMONEY_ADDR 0x0076026C
 #define GAMEPAUSED_ADDR 0x007041C4
@@ -198,6 +198,33 @@ struct CarTypeInfo
 	unsigned char RestOfData2[0x38];
 }*CarTypeInfoArray;
 
+struct NuzlockeSave
+{
+	unsigned int Magic; // NUZL -- just a simple file signature, nothing special
+	unsigned int NuzlockeDifficulty;
+	unsigned int LockedGameDifficulty;
+	unsigned int NumberOfLives;
+	unsigned int TotalLivesLost;
+	unsigned int TotalLosses;
+	unsigned int TotalWins;
+	unsigned int TotalTimeSpentRacing;
+	unsigned int TotalTimePlaying;
+	unsigned int TotalEventsPlayed;
+	unsigned int dummy1;
+	bool bAllowTradingCarMidGame;
+	bool bTrafficRacers;
+	bool bGameIsOver;
+	bool bCantAffordAnyCar;
+	bool bAllCarsLost;
+	bool bGameComplete;
+	bool bGameStarted;
+	bool bProfileStartedCareer;
+	bool bRaceFinished;
+	unsigned int dummy2;
+	// ... then store the NuzCars below
+};
+char SaveFileName[64];
+
 //////////////////////////////////////////////////////////////////
 // Function pointers
 //////////////////////////////////////////////////////////////////
@@ -225,14 +252,14 @@ bool(__thiscall* GameFlowManager_IsPaused)(void* dis) = (bool(__thiscall*)(void*
 // UndergroundBriefScreen
 void(__thiscall* UndergroundBriefScreen_NotificationMessage)(void* UndergroundBriefScreen, unsigned int msg, void* FEObject, unsigned int unk2, unsigned int unk3) = (void(__thiscall*)(void*, unsigned int, void*, unsigned int, unsigned int))0x004C5FA0;
 void(__thiscall* UndergroundBriefScreen_LaunchCurrentEvent)(void* UndergroundBriefScreen, void* FEObject) = (void(__thiscall*)(void*, void*))0x004C5DF0;
-
+// save game
+void(__thiscall* SaveGameFunction)(void* TheThis, unsigned int unk1, char* unk2) = (void(__thiscall*)(void*, unsigned int, char*))0x41D8A0;
 
 void(*sub_546780)() = (void(*)())0x546780;
 void(*sub_4DFD70)() = (void(*)())0x4DFD70;
 void(*sub_40A4E0)() = (void(*)())0x0040A4E0;
 void(*GenerateJoyEvents)() = (void(*)())0x00573CB0;
 void(*game_crt_free)(void* block) = (void(*)(void*))0x00671102;
-
 
 unsigned int GameWndProcAddr = 0;
 LRESULT(WINAPI* GameWndProc)(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -522,6 +549,7 @@ void __stdcall FE_SetButtonState_Str(const char* option_name, const char* pkgnam
 //////////////////////////////////////////////////////////////////
 // Nuzlocke logic
 //////////////////////////////////////////////////////////////////
+
 unsigned int FindCarIndexByHash(unsigned int CarTypeNameHash)
 {
 	for (int i = 0; i < NumberOfCars; i++)
@@ -603,6 +631,123 @@ void __declspec(naked) IsCarUnlockedHook()
 		// modify the result
 		jmp IsCarUnlockedHook_Code
 	}
+}
+
+void SaveGameForCurrentProfile()
+{
+	struct stat st = { 0 };
+	if (stat("NuzlockeSave", &st))
+		_wmkdir(L"NuzlockeSave");
+
+	NuzlockeSave SaveGame = { 0 };
+	// copy the values to the savegame structure
+	SaveGame.Magic = 0x4C5A554E; // NUZL -- just a simple file signature, nothing special
+	SaveGame.dummy1 = 0x4C4F4F42; // BOOL -- bools start marker
+	SaveGame.dummy2 = 0x53524143; // CARS -- cars start marker
+	SaveGame.NuzlockeDifficulty = NuzlockeDifficulty;
+	SaveGame.LockedGameDifficulty = LockedGameDifficulty;
+	SaveGame.NumberOfLives = NumberOfLives;
+	SaveGame.TotalLivesLost = TotalLivesLost;
+	SaveGame.TotalLosses = TotalLosses;
+	SaveGame.TotalWins = TotalWins;
+	SaveGame.TotalTimeSpentRacing = TotalTimeSpentRacing;
+	SaveGame.TotalTimePlaying = TotalTimePlaying;
+	SaveGame.TotalEventsPlayed = TotalEventsPlayed;
+	SaveGame.bAllowTradingCarMidGame = bAllowTradingCarMidGame;
+	SaveGame.bTrafficRacers = bTrafficRacers;
+	SaveGame.bGameIsOver = bGameIsOver;
+	SaveGame.bCantAffordAnyCar = bCantAffordAnyCar;
+	SaveGame.bAllCarsLost = bAllCarsLost;
+	SaveGame.bGameComplete = bGameComplete;
+	SaveGame.bGameStarted = bGameStarted;
+	SaveGame.bProfileStartedCareer = bProfileStartedCareer;
+	SaveGame.bRaceFinished = bRaceFinished;
+	// open the file and save it and the car statuses
+	sprintf(SaveFileName, "NuzlockeSave\\%s.nuz", (char*)(PLAYERNAME_ADDR));
+	FILE* fout = fopen(SaveFileName, "wb");
+	if (!fout)
+		return; // TODO: error handling
+	fwrite(&SaveGame, sizeof(NuzlockeSave), 1, fout);
+	fwrite(NuzCars, sizeof(NuzlockeStruct), NumberOfCars, fout);
+	fwrite(&DDayCar, sizeof(NuzlockeStruct), 1, fout);
+	fclose(fout);
+}
+
+#pragma runtime_checks( "", off )
+void __stdcall SaveGameFunction_Hook(unsigned int unk1, char* unk2)
+{
+	unsigned int thethis = 0;
+	_asm mov thethis, ecx
+	SaveGameForCurrentProfile();
+	return SaveGameFunction((void*)thethis, unk1, unk2);
+}
+#pragma runtime_checks( "", restore )
+
+// triggers game autosave and Nuzlocke save together
+void __stdcall TriggerTotalSaveGame()
+{
+	SaveGameForCurrentProfile();
+	SaveGameFunction((void*)0xFFFFFFFF, 0x78A478, "auto");
+}
+
+void LoadGameForCurrentProfile()
+{
+	sprintf(SaveFileName, "NuzlockeSave\\%s.nuz", (char*)(PLAYERNAME_ADDR));
+	FILE* fin = fopen(SaveFileName, "rb");
+	if (!fin) // TODO: error handling
+		return;
+	NuzlockeSave LoadGame = { 0 };
+
+	fread(&LoadGame, sizeof(NuzlockeSave), 1, fin);
+	if (LoadGame.Magic != 0x4C5A554E)
+		return; // TODO: error handling
+	// assign the vars from the save file
+	NuzlockeDifficulty = LoadGame.NuzlockeDifficulty;
+	LockedGameDifficulty = LoadGame.LockedGameDifficulty;
+	NumberOfLives = LoadGame.NumberOfLives;
+	TotalLivesLost = LoadGame.TotalLivesLost;
+	TotalLosses = LoadGame.TotalLosses;
+	TotalWins = LoadGame.TotalWins;
+	TotalTimeSpentRacing = LoadGame.TotalTimeSpentRacing;
+	TotalTimePlaying = LoadGame.TotalTimePlaying;
+	TotalEventsPlayed = LoadGame.TotalEventsPlayed;
+	bAllowTradingCarMidGame = LoadGame.bAllowTradingCarMidGame;
+	bTrafficRacers = LoadGame.bTrafficRacers;
+	bGameIsOver = LoadGame.bGameIsOver;
+	bCantAffordAnyCar = LoadGame.bCantAffordAnyCar;
+	bAllCarsLost = LoadGame.bAllCarsLost;
+	bGameComplete = LoadGame.bGameComplete;
+	bGameStarted = LoadGame.bGameStarted;
+	bProfileStartedCareer = LoadGame.bProfileStartedCareer;
+	bRaceFinished = LoadGame.bRaceFinished;
+	// load the cars
+	fread(NuzCars, sizeof(NuzlockeStruct), NumberOfCars, fin);
+	fread(&DDayCar, sizeof(NuzlockeStruct), 1, fin);
+
+	// re-init car name pointers
+	for (int i = 0; i < NumberOfCars; i++)
+		NuzCars[i].CarName = CarTypeInfoArray[i].CarTypeName;
+
+	DDayCar.CarName = DDayCarName;
+
+	fclose(fin);
+
+	// shown once bools
+	bShownGameOverOnce = false;
+	bShownLifeOverOnce = false;
+	UpdateCarUnlockStatus();
+}
+
+bool bIsThereASaveFile()
+{
+	sprintf(SaveFileName, "NuzlockeSave\\%s.nuz", (char*)(PLAYERNAME_ADDR));
+	FILE* test = fopen(SaveFileName, "rb");
+	if (test)
+	{
+		fclose(test);
+		return true;
+	}
+	return false;
 }
 
 void __stdcall BuildTradeableList_Hook(int unk)
@@ -720,6 +865,9 @@ bool __stdcall HasEventBeenWon_hook(unsigned int arg1, unsigned int arg2)
 			TotalWins++;
 		}
 		TotalEventsPlayed++;
+
+		// save the nuzlocke game
+		TriggerTotalSaveGame();
 	}
 	return result;
 }
@@ -755,6 +903,9 @@ bool __stdcall NotifyRestart_hook(unsigned int arg1, unsigned int arg2)
 			(*car).TimeOfDeathRT = TotalTimeSpentRacing;
 			(*car).TimeOfDeathPT = TotalTimePlaying;
 		}
+
+		// save the nuzlocke game
+		TriggerTotalSaveGame();
 	}
 
 	bRaceFinished = false;
@@ -796,6 +947,9 @@ void __stdcall PauseMenu_DoQuitRace_Hook(int unk)
 			(*car).TimeOfDeathRT = TotalTimeSpentRacing;
 			(*car).TimeOfDeathPT = TotalTimePlaying;
 		}
+
+		// save the nuzlocke game
+		TriggerTotalSaveGame();
 	}
 
 	bRaceFinished = false;
@@ -831,6 +985,9 @@ bool __stdcall PostRace_DoQuitRace_hook(unsigned int arg1, unsigned int arg2)
 			(*car).TimeOfDeathRT = TotalTimeSpentRacing;
 			(*car).TimeOfDeathPT = TotalTimePlaying;
 		}
+
+		// save the nuzlocke game
+		TriggerTotalSaveGame();
 	}
 
 	if (GameMode == 1 && bMarkedStatusAlready)
@@ -1350,8 +1507,6 @@ float fl_round(float var)
 // 4ms variant (since the game's timer resolution is 4ms)
 void CalcMinSecHuns4(unsigned int ct, int* mins, int* secs, int* huns)
 {
-
-
 	*mins = (int)(((float)ct / 4000.0) / 60.0);
 	*secs = (int)(((float)ct / 4000.0) - (60.0 * (float)*mins));
 	*huns = (int)((((float)ct / 4000.0) - floor((fl_round((float)ct / 4000.0)))) * 100);
@@ -1513,8 +1668,6 @@ void DrawIGHUD()
 		max_width = main_viewport->Size.x;
 
 	width_diff = (main_viewport->Size.x - max_width) / 2;
-
-	//printf("max_width: &.2f\n", max_width);
 
 	ImGui::SetNextWindowSize(ImVec2(text_width, text_height));
 	// position = above tachometer
@@ -1761,6 +1914,40 @@ void ShowStatsWindow()
 	ImGui::End();
 }
 
+void ShowLoadMessage()
+{
+	bool bToLoad = false;
+
+	ImGui::SetNextWindowSize(ImVec2(800.0f, 0.0f));
+
+	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_LOADGAME, NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::PushTextWrapPos();
+		ImGui::Text(NUZLOCKE_LOAD_MSG, (char*)PLAYERNAME_ADDR);
+		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		if (ImGui::Button("Yes", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+		{
+			bToLoad = true;
+			bShowLoadMessage = false;
+		}
+		if (ImGui::Button("No", ImVec2(ImGui::GetContentRegionAvail().x, 0)))
+			bShowLoadMessage = false;
+		ImGui::EndPopup();
+	}
+
+	if (!bShowLoadMessage)
+	{
+		if (bToLoad)
+			LoadGameForCurrentProfile();
+		else
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+			bShowDifficultySelector = true;
+		}
+	}
+}
+
 void ShowIntroMessage()
 {
 	const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -1797,6 +1984,7 @@ void ShowIntroMessage()
 			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP4);
 			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP5);
 			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP6);
+			ImGui::Bullet(); ImGui::TextUnformatted(NUZLOCKE_INTRO_ADDNOTE_BP7);
 			ImGui::PopTextWrapPos();
 			ImGui::TreePop();
 		}
@@ -1819,8 +2007,16 @@ void ShowIntroMessage()
 		}
 		else
 		{
-			ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
-			bShowDifficultySelector = true;
+			if (bIsThereASaveFile() && bProfileStartedCareer)
+			{
+				ImGui::OpenPopup(NUZLOCKE_HEADER_LOADGAME);
+				bShowLoadMessage = true;
+			}
+			else
+			{
+				ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+				bShowDifficultySelector = true;
+			}
 		}
 	}
 	if (!bShowIntroMessage && !bProfileStartedCareer)
@@ -1852,8 +2048,16 @@ void ShowAlreadyLoadedWarning()
 	}
 	if (!bShowAlreadyStartedWarning)
 	{
-		ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
-		bShowDifficultySelector = true;
+		if (bIsThereASaveFile() && bProfileStartedCareer)
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_LOADGAME);
+			bShowLoadMessage = true;
+		}
+		else
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+			bShowDifficultySelector = true;
+		}
 	}
 }
 
@@ -2137,6 +2341,8 @@ void ShowWindows()
 		ShowCarLifeHint();
 	if (bShowDifficultySelector)
 		ShowDifficultySelector();
+	if (bShowLoadMessage)
+		ShowLoadMessage();
 }
 
 
@@ -2298,10 +2504,23 @@ void OnProfileChange()
 		ImGui::OpenPopup(NUZLOCKE_HEADER_INTRO);
 		bShowIntroMessage = true;
 	}
+	else if (!bSkipAlreadyStartedWarning)
+	{
+		ImGui::OpenPopup(NUZLOCKE_HEADER_PROFILEWARNING);
+		bShowAlreadyStartedWarning = true;
+	}
 	else
 	{
-		ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
-		bShowDifficultySelector = true;
+		if (bIsThereASaveFile() && bProfileStartedCareer)
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_LOADGAME);
+			bShowLoadMessage = true;
+		}
+		else
+		{
+			ImGui::OpenPopup(NUZLOCKE_HEADER_DIFFICULTY);
+			bShowDifficultySelector = true;
+		}
 	}
 }
 
@@ -2434,6 +2653,17 @@ int Init()
 	injector::MakeCALL(0x004B382D, UGModeStart_Hook, true);
 	// TradeCarScreen hook -- for car price checking
 	injector::MakeCALL(0x004C3649, UndergroundTradeCarScreen_Constructor_Hook, true);
+
+	// game save hook
+	injector::MakeCALL(0x0041706F, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x00417086, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x0041717E, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x0041CF5D, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x0041D005, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x0041D046, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x004C41E1, SaveGameFunction_Hook, true);
+	injector::MakeCALL(0x004C9700, SaveGameFunction_Hook, true);
+
 	
 	// FUN - traffic racer AI swap
 	injector::MakeJMP(0x0044AAF3, TrafficRacersCave1, true);
