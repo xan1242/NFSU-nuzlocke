@@ -673,6 +673,7 @@ void SaveGameForCurrentProfile()
 	FILE* fout = fopen(SaveFileName, "wb");
 	if (!fout)
 	{
+		errbuffer.str("");
 		errbuffer << "Can't open file " << SaveFileName << " for writing: " << strerror(errno);
 		err_text = errbuffer.str();
 		ImGui::OpenPopup(NUZLOCKE_HEADER_ERROR);
@@ -709,6 +710,7 @@ void LoadGameForCurrentProfile()
 	FILE* fin = fopen(SaveFileName, "rb");
 	if (!fin)
 	{
+		errbuffer.str("");
 		errbuffer << "Can't open file " << SaveFileName << " for reading: " << strerror(errno);
 		err_text = errbuffer.str();
 		ImGui::OpenPopup(NUZLOCKE_HEADER_ERROR);
@@ -720,6 +722,7 @@ void LoadGameForCurrentProfile()
 	fread(&LoadGame, sizeof(NuzlockeSave), 1, fin);
 	if (LoadGame.Magic != 0x4C5A554E)
 	{
+		errbuffer.str("");
 		errbuffer << "Wrong file magic! Expected: 0x4C5A554E Read: 0x" << std::uppercase << std::hex << LoadGame.Magic << std::endl;
 		err_text = errbuffer.str();
 		ImGui::OpenPopup(NUZLOCKE_HEADER_ERROR);
