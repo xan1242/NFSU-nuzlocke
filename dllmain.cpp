@@ -20,6 +20,7 @@
 #include "imgui_impl_win32.h"
 #include <d3d9.h>
 #include <tchar.h>
+#include <iostream>
 
 #define GAME_HWND_ADDR 0x00736380
 #define GAME_D3DDEVICE_ADDR 0x0073636C
@@ -38,6 +39,7 @@ bool bShowGameOverScreen = false;
 bool bShowCarLifeHint = false;
 bool bShowDifficultySelector = false;
 bool bShowLoadMessage = false;
+bool bShowErrorMessage = false;
 
 // Show-once bools
 bool bShownGameOverOnce = false;
@@ -72,6 +74,10 @@ int TimeSinceLastMouseMovement = 0;
 
 #define FEHUD_FONT_SCALE 1.5
 #define IGHUD_FONT_SCALE 1.5
+
+// error string buffer
+std::stringstream errbuffer;
+std::string err_text;
 
 //////////////////////////////////////////////////////////////////
 // Dear ImGui declarations end
@@ -666,7 +672,14 @@ void SaveGameForCurrentProfile()
 	sprintf(SaveFileName, "NuzlockeSave\\%s.nuz", (char*)(PLAYERNAME_ADDR));
 	FILE* fout = fopen(SaveFileName, "wb");
 	if (!fout)
-		return; // TODO: error handling
+	{
+		errbuffer << "Can't open file " << SaveFileName << " for writing: " << strerror(errno);
+		err_text = errbuffer.str();
+		ImGui::OpenPopup(NUZLOCKE_HEADER_ERROR);
+		bShowErrorMessage = true;
+		return;
+	}
+		
 	fwrite(&SaveGame, sizeof(NuzlockeSave), 1, fout);
 	fwrite(NuzCars, sizeof(NuzlockeStruct), NumberOfCars, fout);
 	fwrite(&DDayCar, sizeof(NuzlockeStruct), 1, fout);
@@ -694,13 +707,25 @@ void LoadGameForCurrentProfile()
 {
 	sprintf(SaveFileName, "NuzlockeSave\\%s.nuz", (char*)(PLAYERNAME_ADDR));
 	FILE* fin = fopen(SaveFileName, "rb");
-	if (!fin) // TODO: error handling
+	if (!fin)
+	{
+		errbuffer << "Can't open file " << SaveFileName << " for reading: " << strerror(errno);
+		err_text = errbuffer.str();
+		ImGui::OpenPopup(NUZLOCKE_HEADER_ERROR);
+		bShowErrorMessage = true;
 		return;
+	}
 	NuzlockeSave LoadGame = { 0 };
 
 	fread(&LoadGame, sizeof(NuzlockeSave), 1, fin);
 	if (LoadGame.Magic != 0x4C5A554E)
-		return; // TODO: error handling
+	{
+		errbuffer << "Wrong file magic! Expected: 0x4C5A554E Read: 0x" << std::uppercase << std::hex << LoadGame.Magic << std::endl;
+		err_text = errbuffer.str();
+		ImGui::OpenPopup(NUZLOCKE_HEADER_ERROR);
+		bShowErrorMessage = true;
+		return;
+	}
 	// assign the vars from the save file
 	NuzlockeDifficulty = LoadGame.NuzlockeDifficulty;
 	LockedGameDifficulty = LoadGame.LockedGameDifficulty;
@@ -1914,6 +1939,28 @@ void ShowStatsWindow()
 	ImGui::End();
 }
 
+void ShowErrorMessage()
+{
+	ImGui::SetNextWindowSize(ImVec2(800.0f, 0.0f));
+
+	if (ImGui::BeginPopupModal(NUZLOCKE_HEADER_ERROR, &bShowErrorMessage, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::PushTextWrapPos();
+		ImGui::TextUnformatted(NUZLOCKE_ERROR_MSG);
+		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		ImGui::PushTextWrapPos();
+		ImGui::TextUnformatted(err_text.c_str());
+		ImGui::PopTextWrapPos();
+		ImGui::Separator();
+		if (ImGui::Button("Close"))
+		{
+			bShowErrorMessage = false;
+		}
+		ImGui::EndPopup();
+	}
+}
+
 void ShowLoadMessage()
 {
 	bool bToLoad = false;
@@ -2343,6 +2390,8 @@ void ShowWindows()
 		ShowDifficultySelector();
 	if (bShowLoadMessage)
 		ShowLoadMessage();
+	if (bShowErrorMessage)
+		ShowErrorMessage();
 }
 
 

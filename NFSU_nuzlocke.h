@@ -25,6 +25,9 @@
 // load message
 #define NUZLOCKE_LOAD_MSG "A saved Nuzlocke session for '%s' exists.\nWould you like to load it?\n\nWARNING: This session will be overwritten with a new one upon next save/autosave if you choose to not load it now."
 
+// error message
+#define NUZLOCKE_ERROR_MSG "An error has occured during handling of the Nuzlocke save file."
+
 #define NUZLOCKE_REASON_NOCARS "Reason: No cars available"
 #define NUZLOCKE_REASON_COMPLETE "Reason: Game complete!"
 #define NUZLOCKE_REASON_FINANCIAL "Reason: Can't afford any car"
@@ -35,6 +38,7 @@
 #define NUZLOCKE_HEADER_PROFILEWARNING "NUZLOCKE - Profile Warning"
 #define NUZLOCKE_HEADER_CARLIFE "NUZLOCKE - Lost Life"
 #define NUZLOCKE_HEADER_DIFFICULTY "NUZLOCKE - Select Difficulty"
+#define NUZLOCKE_HEADER_ERROR "NUZLOCKE - Error"
 
 #define NUZLOCKE_UI_CLOSE_TXT "(A) Close"
 
