@@ -1536,17 +1536,19 @@ float fl_round(float var)
 }
 
 // 4ms variant (since the game's timer resolution is 4ms)
-void CalcMinSecHuns4(unsigned int ct, int* mins, int* secs, int* huns)
+void CalcMinSecHuns4(unsigned int ct, int* hours, int* mins, int* secs, int* huns)
 {
-	*mins = (int)(((float)ct / 4000.0) / 60.0);
-	*secs = (int)(((float)ct / 4000.0) - (60.0 * (float)*mins));
+	*hours = (int)(((float)ct / 4000.0) / 60.0) / 60;
+	*mins = (int)(((float)ct / 4000.0) / 60.0) % 60;
+	*secs = (int)(((float)ct / 4000.0) - (60.0 * (float)(int)(((float)ct / 4000.0) / 60.0)));
 	*huns = (int)((((float)ct / 4000.0) - floor((fl_round((float)ct / 4000.0)))) * 100);
 }
 
-void CalcMinSecHuns(unsigned int ct, int* mins, int* secs, int* huns)
+void CalcMinSecHuns(unsigned int ct, int* hours, int* mins, int* secs, int* huns)
 {
-	*mins = (int)(((float)ct / 1000.0) / 60.0);
-	*secs = (int)(((float)ct / 1000.0) - (60.0 * (float)*mins));
+	*hours = (int)(((float)ct / 1000.0) / 60.0) / 60;
+	*mins = (int)(((float)ct / 1000.0) / 60.0) % 60;
+	*secs = (int)(((float)ct / 1000.0) - (60.0 * (float)(int)(((float)ct / 1000.0) / 60.0)));
 	*huns = (int)((((float)ct / 1000.0) - floor((fl_round((float)ct / 1000.0)))) * 100);
 }
 
@@ -1655,13 +1657,14 @@ void DrawIGHUD()
 		car = &DDayCar;
 
 
+	int hours = 0;
 	int mins = 0;
 	int sec = 0;
 	int hun = 0;
 	// this is solely used for precalculating the size, not for actual display
-	sprintf(hud_disp_string, "Lives: %d\nCars: %d/%d\nRacing: %03d:%02d.%02d\nTotal: %04d:%02d.%02d", (*car).Lives, UnlockedCarCount, GameUnlockedCarCount, 888, 88, 88, 8888, 88, 88);
+	sprintf(hud_disp_string, "Lives: %d\nCars: %d/%d\nRacing: %02d:%02d:%02d.%02d\nTotal: %02d:%02d:%02d.%02d", (*car).Lives, UnlockedCarCount, GameUnlockedCarCount, 88, 88, 88, 888, 88, 88, 88, 888);
 
-	float text_width = ImGui::CalcTextSize(hud_disp_string).x + 22 ;
+	float text_width = ImGui::CalcTextSize(hud_disp_string).x + 24;
 	float text_height = ((ImGui::GetTextLineHeightWithSpacing() - 1) * 4);
 	float max_width = 0; // we need to work with max 16:9 aspect ratio
 	float width_scaler = 0;
@@ -1791,8 +1794,8 @@ void DrawIGHUD()
 	curpos = ImGui::GetCursorPos();
 	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align));
 
-	CalcMinSecHuns4((*car).TimeSpentRacing, &mins, &sec, &hun);
-	ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+	CalcMinSecHuns4((*car).TimeSpentRacing, &hours, &mins, &sec, &hun);
+	ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 	ImGui::PopFont();
 
 	// TOTAL TIME
@@ -1811,8 +1814,8 @@ void DrawIGHUD()
 	curpos = ImGui::GetCursorPos();
 	ImGui::SetCursorPos(ImVec2(curpos.x, curpos.y - lcd_font_align));
 
-	CalcMinSecHuns4(TotalTimeSpentRacing, &mins, &sec, &hun);
-	ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+	CalcMinSecHuns4(TotalTimeSpentRacing, &hours, &mins, &sec, &hun);
+	ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 	ImGui::PopFont();
 
 	ImGui::PopStyleColor();
@@ -1857,13 +1860,14 @@ void ShowStatsWindow()
 		ImGui::Text("Car: %s\nLives: %d", DDayCar.CarName, DDayCar.Lives);
 	ImGui::Separator();
 	ImGui::Text("Cars available: %d/%d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nEvents played: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, GameUnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, TotalEventsPlayed, Money, StylePoints);
+	int hours = 0;
 	int mins = 0;
 	int sec = 0;
 	int hun = 0;
-	CalcMinSecHuns4(TotalTimeSpentRacing, &mins, &sec, &hun);
-	ImGui::Text("Total race time: %2d:%02d.%02d", mins, sec, hun);
-	CalcMinSecHuns(TotalTimePlaying, &mins, &sec, &hun);
-	ImGui::Text("Total play time: %2d:%02d.%02d", mins, sec, hun);
+	CalcMinSecHuns4(TotalTimeSpentRacing, &hours, &mins, &sec, &hun);
+	ImGui::Text("Total race time: %2d:%02d:%02d.%02d", hours, mins, sec, hun);
+	CalcMinSecHuns(TotalTimePlaying, &hours, &mins, &sec, &hun);
+	ImGui::Text("Total play time: %2d:%02d:%02d.%02d", hours, mins, sec, hun);
 
 	if (bGameIsOver && bGameStarted)
 	{
@@ -1903,14 +1907,14 @@ void ShowStatsWindow()
 			ImGui::TableSetColumnIndex(4);
 			ImGui::Text("%d", DDayCar.Losses);
 			ImGui::TableSetColumnIndex(5);
-			CalcMinSecHuns4(DDayCar.TimeSpentRacing, &mins, &sec, &hun);
-			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+			CalcMinSecHuns4(DDayCar.TimeSpentRacing, &hours, &mins, &sec, &hun);
+			ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 			ImGui::TableSetColumnIndex(6);
-			CalcMinSecHuns4(DDayCar.TimeOfDeathRT, &mins, &sec, &hun);
-			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+			CalcMinSecHuns4(DDayCar.TimeOfDeathRT, &hours, &mins, &sec, &hun);
+			ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 			ImGui::TableSetColumnIndex(7);
-			CalcMinSecHuns(DDayCar.TimeOfDeathPT, &mins, &sec, &hun);
-			ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+			CalcMinSecHuns(DDayCar.TimeOfDeathPT, &hours, &mins, &sec, &hun);
+			ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 
 			for (int i = 0; i < NumberOfCars; i++)
 			{
@@ -1928,14 +1932,14 @@ void ShowStatsWindow()
 					ImGui::TableSetColumnIndex(4);
 					ImGui::Text("%d", NuzCars[i].Losses);
 					ImGui::TableSetColumnIndex(5);
-					CalcMinSecHuns4(NuzCars[i].TimeSpentRacing, &mins, &sec, &hun);
-					ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+					CalcMinSecHuns4(NuzCars[i].TimeSpentRacing, &hours, &mins, &sec, &hun);
+					ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 					ImGui::TableSetColumnIndex(6);
-					CalcMinSecHuns4(NuzCars[i].TimeOfDeathRT, &mins, &sec, &hun);
-					ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+					CalcMinSecHuns4(NuzCars[i].TimeOfDeathRT, &hours, &mins, &sec, &hun);
+					ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 					ImGui::TableSetColumnIndex(7);
-					CalcMinSecHuns(NuzCars[i].TimeOfDeathPT, &mins, &sec, &hun);
-					ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+					CalcMinSecHuns(NuzCars[i].TimeOfDeathPT, &hours, &mins, &sec, &hun);
+					ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 				}
 			}
 			ImGui::EndTable();
@@ -2147,13 +2151,14 @@ void ShowGameOverScreen()
 		
 		ImGui::Separator();
 		ImGui::Text("Cars available: %d/%d\nTotal wins: %d\nTotal losses: %d\nTotal lives lost: %d\nEvents played: %d\nCash: %d\nStyle points: %d", UnlockedCarCount, GameUnlockedCarCount, TotalWins, TotalLosses, TotalLivesLost, TotalEventsPlayed, Money, StylePoints);
+		int hours = 0;
 		int mins = 0;
 		int sec = 0;
 		int hun = 0;
-		CalcMinSecHuns4(TotalTimeSpentRacing, &mins, &sec, &hun);
-		ImGui::Text("Total race time: %2d:%02d.%02d", mins, sec, hun);
-		CalcMinSecHuns(TotalTimePlaying, &mins, &sec, &hun);
-		ImGui::Text("Total play time: %2d:%02d.%02d", mins, sec, hun);
+		CalcMinSecHuns4(TotalTimeSpentRacing, &hours, &mins, &sec, &hun);
+		ImGui::Text("Total race time: %2d:%02d:%02d.%02d", hours, mins, sec, hun);
+		CalcMinSecHuns(TotalTimePlaying, &hours, &mins, &sec, &hun);
+		ImGui::Text("Total play time: %2d:%02d:%02d.%02d", hours, mins, sec, hun);
 		ImGui::Separator();
 		if (ImGui::CollapsingHeader("Per-car stats##GameOverWindow", ImGuiTreeNodeFlags_None))
 		{
@@ -2181,14 +2186,14 @@ void ShowGameOverScreen()
 				ImGui::TableSetColumnIndex(4);
 				ImGui::Text("%d", DDayCar.Losses);
 				ImGui::TableSetColumnIndex(5);
-				CalcMinSecHuns4(DDayCar.TimeSpentRacing, &mins, &sec, &hun);
-				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+				CalcMinSecHuns4(DDayCar.TimeSpentRacing, &hours, &mins, &sec, &hun);
+				ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 				ImGui::TableSetColumnIndex(6);
-				CalcMinSecHuns4(DDayCar.TimeOfDeathRT, &mins, &sec, &hun);
-				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+				CalcMinSecHuns4(DDayCar.TimeOfDeathRT, &hours, &mins, &sec, &hun);
+				ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 				ImGui::TableSetColumnIndex(7);
-				CalcMinSecHuns(DDayCar.TimeOfDeathPT, &mins, &sec, &hun);
-				ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+				CalcMinSecHuns(DDayCar.TimeOfDeathPT, &hours, &mins, &sec, &hun);
+				ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 
 				for (int i = 0; i < NumberOfCars; i++)
 				{
@@ -2206,14 +2211,14 @@ void ShowGameOverScreen()
 						ImGui::TableSetColumnIndex(4);
 						ImGui::Text("%d", NuzCars[i].Losses);
 						ImGui::TableSetColumnIndex(5);
-						CalcMinSecHuns4(NuzCars[i].TimeSpentRacing, &mins, &sec, &hun);
-						ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+						CalcMinSecHuns4(NuzCars[i].TimeSpentRacing, &hours, &mins, &sec, &hun);
+						ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 						ImGui::TableSetColumnIndex(6);
-						CalcMinSecHuns4(NuzCars[i].TimeOfDeathRT, &mins, &sec, &hun);
-						ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+						CalcMinSecHuns4(NuzCars[i].TimeOfDeathRT, &hours, &mins, &sec, &hun);
+						ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 						ImGui::TableSetColumnIndex(7);
-						CalcMinSecHuns(NuzCars[i].TimeOfDeathPT, &mins, &sec, &hun);
-						ImGui::Text("%2d:%02d.%02d", mins, sec, hun);
+						CalcMinSecHuns(NuzCars[i].TimeOfDeathPT, &hours, &mins, &sec, &hun);
+						ImGui::Text("%2d:%02d:%02d.%02d", hours, mins, sec, hun);
 					}
 				}
 				ImGui::EndTable();
