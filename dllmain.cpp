@@ -613,6 +613,9 @@ unsigned int Arg2 = 0;
 bool PrevResult = false;
 bool __stdcall IsCarUnlockedHook_Code()
 {
+	if (bGameIsOver) // if the game is over, unlock it
+		return PrevResult;
+
 	if (UnlockedCarCount <= 1) // if we have only 1 car unlocked, we MUST keep the current one unlocked so we can access the trade menu
 	{
 		if (Arg1 == CareerCarHash)
@@ -788,7 +791,7 @@ int DisableTradeMenu_Exit_True = 0x00504EBB;
 int DisableTradeMenu_Exit_False = 0x00504E8C;
 void __declspec(naked) DisableTradeMenu_Cave()
 {
-	if (UnlockedCarCount <= 1 || !bAllowTradingCarMidGame) // disable the "Trade" menu option if there's 1 or less cars unlocked
+	if ((UnlockedCarCount <= 1 || !bAllowTradingCarMidGame) && !bGameIsOver) // disable the "Trade" menu option if there's 1 or less cars unlocked
 		_asm jmp DisableTradeMenu_Exit_True 
 	_asm
 	{
@@ -1046,7 +1049,7 @@ void __stdcall FEngSetButtonState_Hook(unsigned int cfeng, unsigned int state)
 	else
 		car = &DDayCar;
 
-	if ((*car).Lives <= 1 && (GameMode == 1))
+	if ((*car).Lives <= 1 && (GameMode == 1) && !bGameIsOver)
 	{
 		FE_SetColor_Hash(0x1AEC7D0A, pkgname, 0xFF404040);
 		return;
@@ -1073,7 +1076,7 @@ unsigned int __stdcall PostRaceMenuScreen_Setup_Hook(unsigned int PostRaceMenuSc
 	else
 		car = &DDayCar;
 
-	if (((*car).Lives <= 1) && (GameMode == 1))
+	if (((*car).Lives <= 1) && (GameMode == 1) && !bGameIsOver)
 	{
 		// specifically hunting 3 and 4 (and decreasing it) because
 		// 1. there apparently is a case where it can have less than 3 buttons in post race screen (never seen it happen)
