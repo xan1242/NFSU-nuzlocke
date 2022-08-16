@@ -120,7 +120,7 @@ bool bTrafficRacers = false;
 #define MINIWORLD_NUMVISIBLESEGMENTS_ENV_ADDR 0x006FB050
 bool bIncreaseMiniworldSegments = true;
 
-unsigned int CustomNumberOfLives = 2;
+int CustomNumberOfLives = 2;
 unsigned int CustomLockedGameDifficulty = 0;
 bool bCustomAllowTrading = false;
 
@@ -177,7 +177,7 @@ struct NuzlockeStruct
 	char* CarName;
 	unsigned int CarNameHash;
 	CarUsageType UsageType;
-	unsigned int Lives;
+	int Lives;
 	unsigned int Wins;
 	unsigned int Losses;
 	unsigned int TimeSpentRacing;
@@ -579,7 +579,7 @@ void UpdateCarUnlockStatus()
 
 		NuzCars[i].bUnlocked = IsCarUnlocked(NuzCars[i].CarNameHash, FECAREERMANAGER_POINTER);
 
-		if (NuzCars[i].bUnlocked && NuzCars[i].Lives && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
+		if (NuzCars[i].bUnlocked && (NuzCars[i].Lives > 0) && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
 			carcount++;
 		if (NuzCars[i].bUnlocked && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
 			gamecarcount++;
@@ -593,7 +593,7 @@ bool bCheckIfAllCarsLocked()
 
 	if (!bProfileStartedCareer)
 	{
-		if (DDayCar.Lives)
+		if (DDayCar.Lives > 0)
 			return false;
 		return true;
 	}
@@ -602,7 +602,7 @@ bool bCheckIfAllCarsLocked()
 	{
 		NuzCars[i].bUnlocked = IsCarUnlocked(NuzCars[i].CarNameHash, FECAREERMANAGER_POINTER);
 
-		if (NuzCars[i].bUnlocked && NuzCars[i].Lives && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
+		if (NuzCars[i].bUnlocked && (NuzCars[i].Lives > 0) && (NuzCars[i].UsageType == CAR_USAGE_TYPE_RACING))
 			return false;
 	}
 	return true;
